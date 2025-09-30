@@ -51,37 +51,33 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       <h1 class="title">Create an account</h1>
       <p class="muted">Join us to get started</p>
 
-      <form id="signupForm" class="grid">
-        <label class="field">
-          <span class="label">Username</span>
-          <input class="input" type="text" name="name" placeholder="Username" required />
-        </label>
+      <form id="signupForm" class="grid" method="POST" action="">
+  <label class="field">
+    <span class="label">Username</span>
+    <input class="input" type="text" name="username" placeholder="Username" required />
+  </label>
 
-        <label class="field">
-          <span class="label">Email</span>
-          <input class="input" type="email" name="email" placeholder="you@example.com" required />
-        </label>
+  <label class="field">
+    <span class="label">Email</span>
+    <input class="input" type="email" name="email" placeholder="you@example.com" required />
+  </label>
 
-        <label class="field">
-          <span class="label">Password</span>
-          <input class="input" type="password" id="password" placeholder="••••••••" minlength="8" required />
-        </label>
+  <label class="field">
+    <span class="label">Password</span>
+    <input class="input" type="password" name="password" placeholder="••••••••" minlength="8" required />
+  </label>
 
-        <label class="field">
-          <span class="label">Confirm password</span>
-          <input class="input" type="password" id="confirm" placeholder="••••••••" minlength="8" required />
-          <small id="matchMsg" style="font-size:13px;color:#ef4444;display:none;">
-            Passwords do not match
-          </small>
-        </label>
+  <label class="field">
+    <span class="label">Confirm password</span>
+    <input class="input" type="password" id="confirm" placeholder="••••••••" minlength="8" required />
+    <small id="matchMsg" style="font-size:13px;color:#ef4444;display:none;">
+      Passwords do not match
+    </small>
+  </label>
 
-        <button class="btn primary" type="submit">Create account</button>
+  <button class="btn primary" type="submit">Create account</button>
+</form>
 
-        <p class="new-here">
-          Already have an account?
-          <a href="index.html" class="btn-ghost">Sign in</a>
-        </p>
-      </form>
       
     </section>
   </main>
