@@ -1,0 +1,136 @@
+
+<!DOCTYPE html>
+<html lang="th" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <title>StudyBoard — Minimal Focus Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="styledas.css" />
+    <script defer src="dashboard.js"></script>
+  </head>
+  <body>
+    <main class="main">
+      <!-- Topbar -->
+      <header class="topbar">
+        <button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch color theme">🌓</button>
+        <div class="user-actions">
+          <img src="" alt="Profile" class="avatar" />
+          <button class="btn danger tiny" type="button">🚪 Logout</button>
+        </div>
+      </header>
+
+      <div class="container">
+        <!-- KPIs -->
+        <section class="stats" aria-label="Focus statistics">
+          <div class="stat">
+            <div class="stat-icon" aria-hidden="true">⏱️</div>
+            <div class="stat-value" id="totalTime">0h</div>
+            <span>Total Focus</span>
+          </div>
+          <div class="stat">
+            <div class="stat-icon" aria-hidden="true">📅</div>
+            <div class="stat-value" id="todayTime">0m</div>
+            <span>Today</span>
+          </div>
+          <div class="stat">
+            <div class="stat-icon" aria-hidden="true">✅</div>
+            <div class="stat-value" id="sessions">0</div>
+            <span>Sessions</span>
+          </div>
+          <div class="stat">
+            <div class="stat-icon" aria-hidden="true">📚</div>
+            <div class="stat-value" id="subjectsCount">0</div>
+            <span>Subjects</span>
+          </div>
+        </section>
+
+        <!-- Main Grid -->
+        <section class="grid focus-grid">
+          <!-- Focus Zone -->
+          <div class="stack focus-wide">
+            <article class="card">
+              <div class="card-head"><h2>🦜 Focus Mode</h2></div>
+
+              <!-- ตั้งเวลา -->
+              <div class="opt">
+                <label for="timeSelect">เลือกเวลา:</label>
+                <select id="timeSelect">
+                  <option value="1">1 นาที (Demo)</option>
+                  <option value="30">30 นาที</option>
+                  <option value="60">1 ชั่วโมง</option>
+                  <option value="90">1 ชั่วโมง 30 นาที</option>
+                  <option value="120">2 ชั่วโมง</option>
+                </select>
+              </div>
+
+              <!-- เลือกวิชา -->
+              <div class="opt">
+                <label for="subjectSelect">เลือกวิชา:</label>
+                <select id="subjectSelect"></select>
+                <input type="text" id="newSubject" placeholder="เพิ่มวิชาใหม่..." />
+                <button class="btn tiny success" type="button" id="addSubjectBtn">➕ เพิ่ม</button>
+              </div>
+
+              <!-- Timer -->
+              <div class="timer">
+                <div id="display" class="timer-display" aria-live="polite">00:00</div>
+                <div class="timer-actions">
+                  <button class="btn success" type="button" id="startBtn">▶️ Start</button>
+                  <button class="btn warning" type="button" id="pauseBtn">⏸️ Pause</button>
+                  <button class="btn danger" type="button" id="stopBtn">⏹️ Stop</button>
+                </div>
+              </div>
+
+              <!-- Quote -->
+              <div class="quote-box" id="quote">“Focus is the key to productivity. Stay committed!” 💪</div>
+
+              <!-- Video + Pet -->
+              <div class="stage">
+                <div class="video-wrap" aria-label="Camera preview placeholder">
+                  <div class="status-badge">🎥 Camera Ready</div>
+                </div>
+                <div class="pet">
+                  <div class="bird" id="bird">🦜</div>
+                  <div class="mood" id="mood">พร้อมเริ่มเมื่อไหร่ก็กด START</div>
+                  <div class="bar-wrap"><div class="bar" id="progressBar"></div></div>
+                  <div class="hint">Progress toward daily goal (2h)</div>
+                </div>
+              </div>
+
+              <!-- เวลาสะสม -->
+              <div class="log">
+                <h3>📊 เวลาสะสมต่อวิชา</h3>
+                <ul id="subjectLog"></ul>
+              </div>
+            </article>
+          </div>
+
+          <!-- Calendar + Clock Zone -->
+          <div class="stack">
+            <article class="card">
+              <div class="card-head"><h2>📅 Calendar</h2></div>
+              <div class="calendar-box">
+                <div id="calHead" class="cal-head">Month YYYY</div>
+                <div id="calGrid" class="cal-grid"></div>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="clock-area">
+                <div id="digitalClock" class="digital-clock">00:00:00</div>
+                <div class="clock-face">
+                  <div class="hand hour"></div>
+                  <div class="hand minute"></div>
+                  <div class="hand second"></div>
+                  <div class="center-dot"></div>
+                </div>
+              </div>
+            </article>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </body>
+</html>
+

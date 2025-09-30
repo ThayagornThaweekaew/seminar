@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Focus Bird · Study Timer</title>
+<style>
+  :root{
+    --bg:#f6f7fb; --card:#ffffff; --text:#0f172a;
+    --primary:#2563eb; --ok:#16a34a; --warn:#f59e0b; --danger:#ef4444;
+    --muted:#64748b; --soft:#e5e7eb; --seed:#8b5cf6;
+  }
+  *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,Arial;
+  background:linear-gradient(135deg,#f3f4f6 0%,#ffffff 60%);color:var(--text)}
+  .wrap{max-width:1100px;margin:0 auto;padding:24px;display:grid;gap:20px}
+  .top{display:flex;justify-content:space-between;align-items:center}
+  .brand{font-weight:800;font-size:20px}
+  .wallet{display:flex;gap:12px;align-items:center}
+  .pill{background:#f8fafc;border:1px solid var(--soft);padding:6px 12px;border-radius:999px;font-weight:600}
+  .grid{display:grid;grid-template-columns:2fr 1fr;gap:20px}
+  .card{background:var(--card);border:1px solid var(--soft);border-radius:16px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+  .card h2{margin:0 0 10px;font-size:18px}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .kpi{background:#fff;border:1px solid var(--soft);border-radius:12px;padding:12px;text-align:center}
+  .kpi .big{font-size:22px;font-weight:800;margin-bottom:4px}
+  .timer-head{display:flex;gap:8px;align-items:end}
+  .input, select, input[type=number]{width:100%;padding:10px;border:1px solid var(--soft);border-radius:10px;background:#f8fafc}
+  .btn{border:none;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:700}
+  .btn.primary{background:var(--primary);color:#fff}
+  .btn.ok{background:var(--ok);color:#fff}.btn.warn{background:var(--warn);color:#fff}
+  .btn.danger{background:var(--danger);color:#fff}
+  .cluster{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .display{font-size:42px;font-weight:800;text-align:center;margin:12px 0}
+  .bird{display:grid;place-items:center;background:linear-gradient(180deg,#dbeafe,#ffffff);
+    border:1px solid var(--soft);border-radius:16px;min-height:220px;position:relative;overflow:hidden}
+  .bird .char{font-size:72px;transition:transform .25s}
+  .mood{position:absolute;bottom:10px;left:0;right:0;text-align:center;color:var(--muted);font-size:14px}
+  .tabs{display:flex;gap:6px}
+  .tab{padding:6px 10px;border:1px solid var(--soft);border-radius:8px;background:#fff;cursor:pointer;font-size:12px}
+  .tab.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+  .bar-wrap{height:10px;background:#eef2ff;border-radius:999px;overflow:hidden}
+  .bar{height:100%;width:0;background:var(--ok);transition:width .4s}
+  .list{display:grid;gap:10px;max-height:220px;overflow:auto}
+  .item{border-bottom:1px dashed #eaeaea;padding-bottom:8px}
+  .shop{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .skin{border:1px solid var(--soft);border-radius:12px;padding:10px;text-align:center}
+  .skin .big{font-size:36px}
+  .skin .price{color:var(--seed);font-weight:700}
+  .hint{color:var(--muted);font-size:13px}
+  .danger-note{color:var(--danger);font-size:13px}
+  @media (max-width:900px){.grid{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand">🐦 Focus Bird · Study Timer</div>
+      <div class="wallet">
+        <div class="pill">🌱 Seeds: <span id="seeds">0</span></div>
+        <div class="pill">🔥 Streak: <span id="streak">0</span>d</div>
+        <button id="logoutBtn" class="btn">Logout</button>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpis">
+      <div class="kpi"><div class="big" id="kToday">0</div><div>Today (min)</div></div>
+      <div class="kpi"><div class="big" id="kWeek">0</div><div>This Week</div></div>
+      <div class="kpi"><div class="big" id="kMonth">0</div><div>This Month</div></div>
+      <div class="kpi"><div class="big" id="kGoal">0%</div><div>Daily Goal</div></div>
+    </div>
+
+    <div class="grid">
+      <!-- LEFT -->
+      <div class="card">
+        <h2>⏱ Timer</h2>
+        <div class="timer-head">
+          <label style="flex:1">
+            <div class="hint">Subject</div>
+            <select id="subject"></select>
+          </label>
+          <label style="width:140px">
+            <div class="hint">Mode</div>
+            <select id="mode">
+              <option value="pomodoro">Pomodoro</option>
+              <option value="stopwatch">Stopwatch</option>
+              <option value="countdown">Countdown</option>
+            </select>
+          </label>
+          <label style="width:120px" id="pomoWorkWrap">
+            <div class="hint">Work (min)</div>
+            <input type="number" id="pomoWork" value="25" min="1" />
+          </label>
+          <label style="width:120px" id="pomoBreakWrap">
+            <div class="hint">Break (min)</div>
+            <input type="number" id="pomoBreak" value="5" min="1" />
+          </label>
+          <label style="width:120px;display:none" id="cdWrap">
+            <div class="hint">Countdown (min)</div>
+            <input type="number" id="cdMinutes" value="45" min="1" />
+          </label>
+          <label style="width:130px">
+            <div class="hint">Daily goal (min)</div>
+            <input type="number" id="goal" value="120" min="10" />
+          </label>
+        </div>
+
+        <div class="bird" id="bird">
+          <div id="birdChar" class="char">🐦</div>
+          <div class="mood" id="mood">พร้อมโฟกัสหรือยัง? กด Start ได้เลย!</div>
+        </div>
+
+        <div class="display" id="display">00:00:00</div>
+        <div class="cluster" style="justify-content:center">
+          <button id="startBtn" class="btn ok">Start</button>
+          <button id="pauseBtn" class="btn warn">Pause</button>
+          <button id="stopBtn" class="btn danger">Stop</button>
+        </div>
+
+        <div style="margin-top:14px">
+          <div class="hint">Progress toward daily goal</div>
+          <div class="bar-wrap"><div class="bar" id="goalBar"></div></div>
+        </div>
+      </div>
+
+      <!-- RIGHT -->
+      <div class="card">
+        <div class="tabs" id="tabs">
+          <button class="tab active" data-tab="recent">Recent</button>
+          <button class="tab" data-tab="shop">Shop</button>
+          <button class="tab" data-tab="profile">Profile</button>
+        </div>
+
+        <!-- Recent -->
+        <div id="recent" class="list" style="margin-top:12px"></div>
+
+        <!-- Shop -->
+        <div id="shop" class="shop" style="display:none;margin-top:12px">
+          <!-- skins injected -->
+        </div>
+
+        <!-- Profile -->
+        <div id="profile" style="display:none;margin-top:12px">
+          <div class="item"><strong>ชื่อผู้ใช้:</strong> <span id="userName">Guest</span></div>
+          <div class="item"><strong>อีเมล:</strong> <span id="userEmail">-</span></div>
+          <div class="item"><span class="danger-note">หมายเหตุ: เดโมนี้เก็บข้อมูลในเบราว์เซอร์เท่านั้น</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>📝 Add note</h2>
+      <div class="cluster">
+        <input id="note" class="input" placeholder="สรุปสิ่งที่อ่าน… (ไม่จำเป็น)" />
+        <button id="addSub" class="btn">+ Subject</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* ========= State & Helpers ========= */
+const $ = (q)=>document.querySelector(q);
+const pad = n => String(n).padStart(2,'0');
+const fmt = s => {
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
+  return `${pad(h)}:${pad(m)}:${pad(sec)}`;
+};
+
+const store = {
+  get(key, fallback){ try{ return JSON.parse(localStorage.getItem(key)) ?? fallback }catch{return fallback} },
+  set(key, val){ localStorage.setItem(key, JSON.stringify(val)) }
+};
+
+const subjectsKey = 'fb_subjects';
+const sessionsKey = 'fb_sessions';
+const userKey = 'loggedInUser';
+const seedsKey = 'fb_seeds';
+const skinKey = 'fb_skin';
+const streakKey = 'fb_streak';
+const dayKey = 'fb_lastDay';
+const goalKey = 'fb_goal';
+const todayKey = 'fb_todayMin';
+const weekKey = 'fb_weekMin';
+const monthKey = 'fb_monthMin';
+
+const skins = [
+  { id:'bird',  emoji:'🐦', name:'Bluebird', price:0 },
+  { id:'dove',  emoji:'🕊️', name:'Dove', price:80 },
+  { id:'parrot',emoji:'🦜', name:'Parrot', price:120 },
+  { id:'owl',   emoji:'🦉', name:'Owl', price:180 },
+];
+
+let timer=null, seconds=0, running=false, phase='work'; // pomodoro phase
+let lastTick=0;
+
+function initUser(){
+  const user = store.get(userKey,null);
+  if(!user){ // ถ้าอยากล็อกหลังบ้านจริง ให้ redirect ไปหน้า login
+    // window.location.href = 'index.html';
+  } else {
+    $('#userName').textContent = user.name || 'User';
+    $('#userEmail').textContent = user.email || '-';
+  }
+  // header logout
+  $('#logoutBtn').addEventListener('click', ()=>{
+    localStorage.removeItem(userKey);
+    window.location.href = 'index.html';
+  });
+}
+
+function initSubjects(){
+  const list = store.get(subjectsKey, ['General','English','Math','Science']);
+  store.set(subjectsKey, list);
+  const sel = $('#subject'); sel.innerHTML='';
+  list.forEach(s=>{
+    const o=document.createElement('option'); o.value=o.textContent=s; sel.appendChild(o);
+  });
+  $('#addSub').onclick = ()=>{
+    const name = prompt('Subject name:');
+    if(name){
+      const arr = store.get(subjectsKey, []);
+      if(!arr.includes(name)){ arr.push(name); store.set(subjectsKey, arr); initSubjects(); }
+      $('#subject').value = name;
+    }
+  };
+}
+
+function initWallet(){
+  $('#seeds').textContent = store.get(seedsKey,0);
+  $('#streak').textContent = store.get(streakKey,0);
+  $('#kToday').textContent = store.get(todayKey,0);
+  $('#kWeek').textContent = store.get(weekKey,0);
+  $('#kMonth').textContent = store.get(monthKey,0);
+  const goal = store.get(goalKey, 120); $('#goal').value = goal;
+  updateGoalBar();
+}
+
+function updateGoalBar(){
+  const goal = Number($('#goal').value||120);
+  store.set(goalKey, goal);
+  const today = store.get(todayKey,0);
+  const per = Math.max(0, Math.min(100, Math.round(today/goal*100)));
+  $('#kGoal').textContent = `${per}%`;
+  $('#goalBar').style.width = per+'%';
+}
+
+function tick(now){
+  if(!running) return;
+  if(now - lastTick >= 1000){
+    seconds++; lastTick = now;
+    $('#display').textContent = fmt(seconds);
+    if($('#mode').value === 'countdown'){
+      const remain = Number($('#cdMinutes').value)*60 - seconds;
+      if(remain <= 0){ finishSession(); return; }
+    }
+  }
+  requestAnimationFrame(tick);
+}
+
+/* ======= Mascot ======= */
+function mood(text, bounce=false){
+  $('#mood').textContent = text;
+  const c = $('#birdChar');
+  if(bounce){ c.style.transform='translateY(-6px)'; setTimeout(()=>c.style.transform='translateY(0)',200); }
+}
+function setSkin(){
+  const s = store.get(skinKey,'bird');
+  const emoji = (skins.find(x=>x.id===s) || skins[0]).emoji;
+  $('#birdChar').textContent = emoji;
+}
+
+/* ======= Sessions & Rewards ======= */
+function saveSession(min){
+  const note = $('#note').value.trim();
+  const item = {
+    ts: Date.now(), subject: $('#subject').value,
+    sec: seconds, min: Math.round(seconds/60), note
+  };
+  const arr = store.get(sessionsKey,[]); arr.unshift(item); store.set(sessionsKey, arr);
+  renderRecent();
+}
+
+function addSeeds(min){
+  const base = Math.max(1, Math.round(min*1.2)); // 1.2 seeds/min
+  const bonus = (phase==='work') ? 5 : 0;
+  const total = base + bonus;
+  const now = store.get(seedsKey,0)+ total;
+  store.set(seedsKey, now);
+  $('#seeds').textContent = now;
+  return total;
+}
+
+function updateKpis(min){
+  const today = new Date(); const keyDay = today.toISOString().slice(0,10);
+  const lastDay = store.get(dayKey, null);
+  let t = store.get(todayKey,0), w=store.get(weekKey,0), m=store.get(monthKey,0);
+  if(lastDay !== keyDay){ // new day -> reset today; streak handling
+    // streak
+    if(lastDay){
+      const d1=new Date(lastDay), d2=new Date(keyDay);
+      const diff=(d2 - d1)/86400000;
+      let streak = store.get(streakKey,0);
+      if(diff===1){ streak++; } else { streak=0; }
+      store.set(streakKey, streak); $('#streak').textContent = streak;
+    }
+    t=0; store.set(dayKey,keyDay);
+  }
+  t += min; w += min; m += min;
+  store.set(todayKey,t); store.set(weekKey,w); store.set(monthKey,m);
+  $('#kToday').textContent = t; $('#kWeek').textContent = w; $('#kMonth').textContent = m;
+  updateGoalBar();
+}
+
+function renderRecent(){
+  const list = store.get(sessionsKey,[]);
+  const $r = $('#recent'); $r.innerHTML='';
+  if(list.length===0){ $r.innerHTML='<div class="hint">ยังไม่มีบันทึกเริ่มต้นโฟกัสเลย ลองเริ่มรอบแรกดูสิ!</div>'; return; }
+  list.slice(0,12).forEach(s=>{
+    const t = new Date(s.ts).toLocaleString();
+    const el = document.createElement('div');
+    el.className='item';
+    el.innerHTML = `✔️ <strong>${s.subject}</strong> — ${s.min} นาที <span class="hint">(${t})</span>` + (s.note? `<div class="hint">“${s.note}”</div>`:'');
+    $r.appendChild(el);
+  });
+}
+
+/* ======= Shop ======= */
+function renderShop(){
+  const $shop = $('#shop'); $shop.innerHTML='';
+  const ownedId = store.get(skinKey,'bird');
+  skins.forEach(sk=>{
+    const el=document.createElement('div'); el.className='skin';
+    el.innerHTML = `
+      <div class="big">${sk.emoji}</div>
+      <div><strong>${sk.name}</strong></div>
+      <div class="price">🌱 ${sk.price}</div>
+      <div style="margin-top:6px">
+        <button class="btn ${ownedId===sk.id?'primary':''}" data-skin="${sk.id}">
+          ${sk.price===0 || ownedId===sk.id ? 'Use' : 'Buy'}
+        </button>
+      </div>`;
+    $shop.appendChild(el);
+  });
+
+  $shop.querySelectorAll('button[data-skin]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const id=btn.dataset.skin;
+      const sk = skins.find(s=>s.id===id);
+      const owned = (id===store.get(skinKey,'bird')) || sk.price===0;
+      let seeds = store.get(seedsKey,0);
+
+      if(!owned){
+        if(seeds < sk.price){ alert('🌱 ไม่พอสำหรับสกินนี้'); return; }
+        seeds -= sk.price; store.set(seedsKey,seeds); $('#seeds').textContent = seeds;
+      }
+      store.set(skinKey, id); setSkin(); renderShop();
+      mood(`เปลี่ยนเป็น ${sk.name} แล้ว!`, true);
+    };
+  });
+}
+
+/* ======= Tabs ======= */
+document.getElementById('tabs').addEventListener('click', (e)=>{
+  if(!e.target.classList.contains('tab')) return;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  e.target.classList.add('active');
+  const tab = e.target.dataset.tab;
+  ['recent','shop','profile'].forEach(id=>$('#'+id).style.display = (id===tab)?'grid':'none');
+  if(tab==='shop') renderShop();
+});
+
+/* ======= Timer Controls ======= */
+function startTimer(){
+  if(running) return;
+  running = true; lastTick = performance.now();
+  requestAnimationFrame(tick);
+  mood(phase==='work' ? 'กำลังโฟกัส… อย่าหนีไปไหนนะ! 🐦✨' : 'พักสายตาสักครู่ ☕', true);
+}
+function pauseTimer(){ running=false; mood('พักก่อน เดี๋ยวค่อยไปต่อ 🐦') }
+function stopTimer(){
+  if(!running && seconds===0){ mood('ยังไม่ได้เริ่มเลยนะ'); return; }
+  finishSession();
+}
+function finishSession(){
+  running=false;
+  const min = Math.max(1, Math.round(seconds/60));
+  saveSession(min);
+  updateKpis(min);
+  const earned = (phase==='work') ? addSeeds(min) : 0;
+  mood(phase==='work' ? `เยี่ยม! +${earned} 🌱` : 'พักเสร็จแล้ว ไปต่อกัน!', true);
+  seconds=0; $('#display').textContent=fmt(0);
+  // auto-switch for pomodoro
+  if($('#mode').value==='pomodoro'){
+    if(phase==='work'){ phase='break'; autoCountdown(Number($('#pomoBreak').value)); }
+    else { phase='work'; autoCountdown(Number($('#pomoWork').value)); }
+  }
+}
+
+function autoCountdown(min){
+  $('#mode').value='countdown';
+  $('#cdMinutes').value=min;
+  modeChanged();
+  startTimer();
+}
+
+/* ======= Mode change & UI ======= */
+function modeChanged(){
+  const m = $('#mode').value;
+  $('#pomoWorkWrap').style.display = m==='pomodoro' ? '' : 'none';
+  $('#pomoBreakWrap').style.display = m==='pomodoro' ? '' : 'none';
+  $('#cdWrap').style.display = m==='countdown' ? '' : 'none';
+  if(m!=='pomodoro'){ phase='work'; }
+  seconds=0; $('#display').textContent=fmt(0);
+  mood(m==='pomodoro' ? 'โหมด Pomodoro พร้อมเริ่ม!' :
+       m==='countdown' ? 'ตั้งเวลานับถอยหลังแล้ว' : 'จับเวลาอิสระ พร้อมนะ!');
+}
+
+/* ======= Anti-distraction (tab switch) ======= */
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden && running){
+    running=false; mood('หนีไปไหน! หยุดนับก่อนนะ 🐦💢');
+  }
+});
+
+/* ======= Events ======= */
+$('#startBtn').onclick = startTimer;
+$('#pauseBtn').onclick = pauseTimer;
+$('#stopBtn').onclick = stopTimer;
+$('#mode').onchange = modeChanged;
+$('#goal').oninput = updateGoalBar;
+
+/* ======= Boot ======= */
+(function boot(){
+  initUser();
+  initSubjects();
+  initWallet();
+  renderRecent();
+  setSkin();
+  modeChanged();
+})();
+</script>
+</body>
+</html>

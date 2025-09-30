@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Login</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="wrap">
+    <section class="panel">
+      <h1 class="title">Welcome back</h1>
+      <p class="muted">Sign in to continue</p>
+
+      <form id="loginForm" class="grid">
+        <label class="field">
+          <span class="label">Email</span>
+          <input class="input" type="email" name="email" placeholder="you@example.com" required />
+        </label>
+
+        <label class="field">
+          <span class="label">Password</span>
+          <input class="input" type="password" name="password" placeholder="••••••••" minlength="8" required />
+        </label>
+
+        <!-- 🔗 ลิงก์ลืมรหัสผ่าน -->
+        <p style="text-align:right; margin-top:-8px; margin-bottom:12px;">
+          <a href="forgot.html" class="btn-ghost">ลืมรหัสผ่าน?</a>
+        </p>
+
+        <button class="btn primary" type="submit">Sign in</button>
+
+        <p class="new-here">
+          New here?
+          <a href="signup.html" class="btn-ghost">Create an account</a>
+        </p>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    const loginForm = document.getElementById("loginForm");
+    loginForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const email = loginForm.email.value;
+      const password = loginForm.password.value;
+
+      const users = JSON.parse(localStorage.getItem("users") || "[]");
+      const user = users.find(u => u.email === email && u.password === password);
+
+      if (user) {
+        localStorage.setItem("loggedInUser", JSON.stringify(user));
+        window.location.href = "dashboard.html";
+      } else {
+        alert("❌ Email หรือ Password ไม่ถูกต้อง");
+      }
+    });
+  </script>
+</body>
+</html>
