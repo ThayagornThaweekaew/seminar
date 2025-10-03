@@ -1,33 +1,46 @@
-import pyodbc
+import mysql.connector
 
-# กำหนดค่าการเชื่อมต่อ
-server = 'Servername'       # เช่น 'localhost' หรือ '192.168.1.10'
-database = 'login'   # ชื่อฐานข้อมูล
-username = 'sa'        # ชื่อผู้ใช้
-password = 'Thanadol02'        # รหัสผ่าน
+def run_query(sql):
+    """ฟังก์ชันรัน query แล้วคืนผลลัพธ์"""
+    try:
+        conn = mysql.connector.connect(
+            host="localhost",
+            user="root",
+            password="จๅจภจถจุ",  # ใส่รหัสผ่านที่ถูกต้อง
+            database="seminar"
+        )
 
-# สร้าง connection string
-conn_str = (
-    f"DRIVER={{ODBC Driver 17 for SQL Server}};"
-    f"SERVER={server};"
-    f"DATABASE={database};"
-    f"UID={username};"
-    f"PWD={password}"
-)
+        cursor = conn.cursor()
+        cursor.execute(sql)
+        results = cursor.fetchall()
+        return results
 
-try:
-    # เชื่อมต่อกับ SQL Server
-    conn = pyodbc.connect(conn_str)
-    print("✅ เชื่อมต่อสำเร็จ!")
+    except mysql.connector.Error as err:
+        print("❌ Error:", err)
+        return []
 
-    # สร้าง cursor เพื่อทำงานกับ database
-    cursor = conn.cursor()
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'conn' in locals() and conn.is_connected():
+            conn.close()
 
-    # ตัวอย่างการ query
-    cursor.execute("SELECT TOP 10 * FROM YourTableName")
+# 🔹 ตัวอย่างใช้งาน
+print("ตาราง user_login:")
+for row in run_query("SELECT * FROM user_login"):
+    print(row)
 
-    for row in cursor.fetchall():
-        print(row)
+print("\nตาราง dashboard:")
+for row in run_query("SELECT * FROM dashboard"):
+    print(row)
 
-except Exception as e:
-    print("❌ เกิดข้อผิดพลาด:", e)
+print("\nตาราง subject:")
+for row in run_query("SELECT * FROM subject"):
+    print(row)
+print("\nตาราง plan:")
+for row in run_query("SELECT * FROM plan"):
+    print(row)
+
+print("\nชื่อทุกตารางใน seminar:")
+for row in run_query("SHOW TABLES"):
+    print(row[0])

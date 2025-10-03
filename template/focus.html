@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Focus Bird · Serious Focus Mode</title>
-  <link rel="stylesheet" href="focus.css" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='focus.css') }}">
   <!-- MediaPipe deps -->
   <script defer src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
@@ -108,5 +108,6 @@
   </div>
 
   <div id="toast" class="toast"></div>
+  <script src="{{ url_for('serve_js', filename='focus.js') }}" defer></script>
 </body>
 </html>
