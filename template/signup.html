@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Signup</title>
-  <link rel="stylesheet" href="/CSS/style.css" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
 </head>
 <body>
   <main class="wrap">
@@ -12,7 +12,7 @@
       <h1 class="title">Create an account</h1>
       <p class="muted">Join us to get started</p>
 
-     <form id="signupForm" class="grid" action="/signup" method="post">
+     <form id="signupForm" class="grid" action="{{ url_for('signup_submit') }}" method="post">
   <label class="field">
     <span class="label">Username</span>
     <input class="input" type="text" name="username" placeholder="Username" required />
@@ -37,7 +37,7 @@
 
   <p class="new-here">
     Already have an account?
-    <a href="/login" class="btn-ghost">Sign in</a>
+    <a href="{{ url_for('login_page') }}" class="btn-ghost">Sign in</a>
   </p>
 </form>
 

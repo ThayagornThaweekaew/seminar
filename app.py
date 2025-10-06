@@ -17,6 +17,22 @@ JS_DIR   = os.path.join(BASE_DIR, "JS")
 app = Flask(__name__, template_folder="template", static_folder="CSS", static_url_path="/CSS")
 app.secret_key = "change_me_to_random_secret"  # เปลี่ยนเป็นค่า random ในโปรดักชัน
 
+# ทำให้ session cookie ใช้งานได้ข้ามเครื่อง (LAN) และไม่ cache HTML
+app.config.update(
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=False,   # ใช้ True เมื่อรัน HTTPS
+    SESSION_COOKIE_HTTPONLY=True,
+)
+
+@app.after_request
+def _no_cache_html(resp):
+    try:
+        if resp.mimetype in ("text/html", "application/xhtml+xml"):
+            resp.headers["Cache-Control"] = "no-store"
+    except Exception:
+        pass
+    return resp
+
 # ---------- DB CONFIG ----------
 DB_CONFIG = {
     "host": "127.0.0.1",
@@ -409,6 +425,5 @@ def delete_plan(pid):
 # ================== RUN ==================
 if __name__ == "__main__":
     # อย่าวาง route/ตั้งค่าเพิ่มเติมไว้ใต้บรรทัดนี้
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)
 # ================== APIs for Plan Management ==================
-   
