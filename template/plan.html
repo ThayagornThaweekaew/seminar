@@ -228,6 +228,13 @@ html[data-theme="dark"] *::-webkit-scrollbar-thumb{background:#2a3a59}
 .theme-toggle:focus-visible{ outline: 2px solid var(--sb-accent); outline-offset: 2px; }
 .sidebar .theme-toggle{ justify-content: flex-start; }
 
+    /* ===== Collapsible Sidebar (collapsed state) ===== */
+    /* ลบกฎย่อ sidebar ทั้งบล็อกนี้ออก:
+       body.has-sidebar.sidebar-collapsed { ... }
+       body.has-sidebar, .sidebar { transition: ... }
+       body.has-sidebar.sidebar-collapsed .sidebar-section-title, .profile-name, .profile-sub, .menu .menu-btn .label { display:none ... }
+       และตัวที่เกี่ยวข้องทั้งหมด
+    */
   </style>
 </head>
 
@@ -236,7 +243,8 @@ html[data-theme="dark"] *::-webkit-scrollbar-thumb{background:#2a3a59}
   <aside class="sidebar" aria-label="แถบเมนูด้านข้าง">
     <div class="sidebar-inner">
       <div class="sidebar-top">
-        <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">☰</button>
+        <!-- ลบปุ่มย่อ/ขยาย -->
+        <!-- <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">☰</button> -->
         <div style="flex:1"></div>
         <button class="menu-btn theme-toggle" id="themeToggle" type="button" aria-pressed="false" aria-label="Switch color theme">
           <span class="icon" id="themeIcon">🌓</span>
@@ -249,10 +257,10 @@ html[data-theme="dark"] *::-webkit-scrollbar-thumb{background:#2a3a59}
           <img src="{{ url_for('static', filename='โปร.jpg') }}" class="avatar" alt="Profile">
           <div>
             <div class="profile-name">My Profile</div>
-            <div class="profile-sub">พร้อมลุยอ่าน! ✨</div>
+            <!-- เปลี่ยนข้อความให้ตรงกับ dashboard -->
+            <div class="profile-sub">พร้อมลุยวันนี้ ✨</div>
           </div>
-          <!-- เพิ่มปุ่ม Logout -->
-          <button class="icon-btn logout-icon" id="logoutBtn" title="ออกจากระบบ" aria-label="Logout" style="width:32px;height:32px;border-radius:8px;background:transparent;">🚪</button>
+          <button class="icon-btn logout-icon" id="logoutBtn" title="ออกจากระบบ" aria-label="Logout">🚪</button>
         </div>
       </div>
 
@@ -376,9 +384,6 @@ html[data-theme="dark"] *::-webkit-scrollbar-thumb{background:#2a3a59}
       });
     })();
 
-    // ย่อ/ขยาย Sidebar
-    document.getElementById("sidebarToggle")?.addEventListener("click", ()=>{ document.body.classList.toggle("sidebar-collapsed"); });
-
     // ========= Auto-active (normalize path) =========
     (function markActive(){
       function norm(p){ try{ return new URL(p, location.origin).pathname.replace(/\/+$/,''); }catch{ return String(p||'').replace(/\/+$/,''); } }
@@ -488,6 +493,35 @@ html[data-theme="dark"] *::-webkit-scrollbar-thumb{background:#2a3a59}
       if(field==="title"){ v=prompt("ชื่อเรื่อง/หัวข้อ:", p.title||""); if(v!==null) p.title=v.trim(); }
       else if(field==="date"){ v=prompt("วันที่ (YYYY-MM-DD):", p.date||""); if(v!==null) p.date=v.trim(); }
       else if(field==="priority"){ v=prompt("ความสำคัญ (ปกติ/สูง/ด่วนมาก):", p.priority||"ปกติ"); if(v!==null) p.priority=v.trim(); }
+      else if(field==="subject"){ v=prompt("วิชา/หมวด:", p.subject||""); if(v!==null) p.subject=v.trim(); }
+      else if(field==="notes"){ v=prompt("โน้ต:", p.notes||""); if(v!==null) p.notes=v.trim(); }
+      save(); render();
+    });
+
+    // Filters
+    $("clearFilters")?.addEventListener("click",()=>{ if(qEl) qEl.value=""; if(fPriorityEl) fPriorityEl.value=""; if(fSubjectEl) fSubjectEl.value=""; if(sortEl) sortEl.value="date-asc"; render(); });
+    qEl?.addEventListener("input",render); fPriorityEl?.addEventListener("change",render); fSubjectEl?.addEventListener("input",render); sortEl?.addEventListener("change",render);
+
+    // Export/Import
+    exportBtn?.addEventListener("click",()=>{
+      const blob=new Blob([JSON.stringify({exportedAt:new Date().toISOString(),plans,meta},null,2)],{type:"application/json"});
+      const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download="reading-plans.json"; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    });
+    importFile?.addEventListener("change",e=>{
+      const f=e.target.files?.[0]; if(!f) return;
+      const r=new FileReader(); r.onload=()=>{
+        try{ const d=JSON.parse(r.result); if(!d||!Array.isArray(d.plans)) throw Error("ไฟล์ไม่ถูกต้อง");
+          plans=d.plans; meta=Object.assign({streakDays:0,lastReadDate:null}, d.meta||{}); save(); saveMeta(); render(); alert("นำเข้าเรียบร้อย 🎉");
+        }catch(err){ alert("นำเข้าไม่สำเร็จ: "+err.message); }
+        finally{ importFile.value=""; }
+      }; r.readAsText(f,"utf-8");
+    });
+
+    // First render
+    render();
+  </script>
+</body>
+</html>
       else if(field==="subject"){ v=prompt("วิชา/หมวด:", p.subject||""); if(v!==null) p.subject=v.trim(); }
       else if(field==="notes"){ v=prompt("โน้ต:", p.notes||""); if(v!==null) p.notes=v.trim(); }
       save(); render();

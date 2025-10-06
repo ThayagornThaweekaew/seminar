@@ -17,14 +17,15 @@
   </script>
   <!-- CSS จาก static_folder="CSS" -->
   <link rel="stylesheet" href="{{ url_for('static', filename='styledas.css') }}">
+  <style>
+    .logout-icon{ width:32px; height:32px; border-radius:8px; background:transparent; }
+  </style>
 </head>
-
 <body class="has-sidebar" data-page="dashboard">
   <!-- ========== Sidebar ========== -->
   <aside class="sidebar" aria-label="แถบเมนูด้านข้าง">
     <div class="sidebar-inner">
       <div class="sidebar-top">
-        <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">☰</button>
         <div style="flex:1"></div>
         <button class="menu-btn theme-toggle" id="themeToggle" type="button" aria-pressed="false" aria-label="Switch color theme">
           <span class="icon" id="themeIcon">🌓</span>
@@ -189,14 +190,6 @@
 
   <!-- ========== Scripts ========== -->
   <script>
-    // Toggle Sidebar — ให้เหมือน plan (ใช้แค่ body.sidebar-collapsed)
-    (function(){
-      const toggleBtn = document.getElementById('sidebarToggle');
-      toggleBtn?.addEventListener('click', () => {
-        document.body.classList.toggle('sidebar-collapsed');
-      });
-    })();
-
     // ทำให้คลิกโปรไฟล์แล้วไปหน้าโปรไฟล์จริงผ่าน Flask route
     (function(){
       const card = document.getElementById('sidebarProfile');
@@ -292,5 +285,4 @@
   <!-- ✅ dashboard.js โหลดทีเดียวหลัง MediaPipe -->
   <script src="{{ url_for('serve_js', filename='dashboard.js') }}" defer></script>
 </body>
-</html>
 </html>

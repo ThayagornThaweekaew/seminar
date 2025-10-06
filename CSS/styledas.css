@@ -1326,3 +1326,37 @@ html[data-theme="dark"] .sidebar-profile .avatar{ background:#223; }
 
 /* Small helpers for user page grids */
 .panel .grid{ gap: 12px; }
+
+/* ===== Sidebar collapsible (grid layout) ===== */
+body.has-sidebar.sidebar-collapsed{
+  grid-template-columns: 84px minmax(0,1fr) !important;
+}
+body.has-sidebar.sidebar-collapsed .sidebar{
+  padding: 10px;
+}
+
+/* ซ่อนข้อความ/label เมื่อย่อ ให้ปุ่มอยู่กึ่งกลาง */
+body.has-sidebar.sidebar-collapsed .sidebar-section-title,
+body.has-sidebar.sidebar-collapsed .profile-name,
+body.has-sidebar.sidebar-collapsed .profile-sub,
+body.has-sidebar.sidebar-collapsed .menu .menu-btn .label{
+  display: none !important;
+}
+body.has-sidebar.sidebar-collapsed .menu .menu-btn{
+  justify-content: center;
+}
+body.has-sidebar.sidebar-collapsed .sidebar-profile .avatar{
+  border-radius: 50%;
+}
+
+/* ปุ่มธีมเมื่อย่อ: ซ่อน label และจัดกึ่งกลาง */
+body.has-sidebar.sidebar-collapsed .theme-toggle{
+  justify-content: center;
+}
+body.has-sidebar.sidebar-collapsed .theme-toggle .label{
+  display: none;
+}
+
+/* ทรานซิชันลื่นตา */
+body.has-sidebar,
+.sidebar{ transition: all .25s ease; }
