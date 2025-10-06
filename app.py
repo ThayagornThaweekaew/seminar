@@ -40,7 +40,7 @@ def _no_cache_html(resp):
 
 # ---------- DB CONFIG ----------
 DB_CONFIG = {
-    "host": "127.0.0.1",
+    "host": "192.168.1.4",
     "port": 3306,
     "user": "root",
     "password": "จๅจภจถจุ",  # แก้ให้ตรงของคุณ
