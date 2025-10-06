@@ -116,10 +116,9 @@ def _success_alias(): return redirect(url_for("success_page"))
 @app.route("/user.html")
 def _user_alias():    return redirect(url_for("user_page"))
 
-# ---------- DASHBOARD/INDEX (อัปโหลด + โหมดอ่านหนังสือ) ----------
-@app.route("/dashboard", methods=["GET", "POST"])
-@app.route("/index", methods=["GET", "POST"], endpoint="index")
-def dashboard():
+# ---------- INDEX (อัปโหลด + โหมดอ่านหนังสือ) ----------
+@app.route("/index", methods=["GET", "POST"])
+def index():
     if "user_id" not in session:
         flash("กรุณาเข้าสู่ระบบก่อน", "error")
         return redirect(url_for("login_page"))
@@ -182,11 +181,16 @@ def dashboard():
             return redirect(request.url)
 
     return render_template(
-        "index.html",                 # ← เปลี่ยนจาก "dashboard.html"
+        "index.html",
         reading_text=reading_text,
         download_url=download_url,
         pdf_url=pdf_url
     )
+
+# รองรับลิงก์เก่า /dashboard และคง method เดิมไว้ (เช่น POST อัปโหลดไฟล์)
+@app.route("/dashboard", methods=["GET", "POST"])
+def dashboard_alias():
+    return redirect(url_for("index"), code=307)
 
 # ================== AUTH ==================
 @app.route("/signup", methods=["POST"])
@@ -426,5 +430,5 @@ def delete_plan(pid):
 # ================== RUN ==================
 if __name__ == "__main__":
     # อย่าวาง route/ตั้งค่าเพิ่มเติมไว้ใต้บรรทัดนี้
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)
 # ================== APIs for Plan Management ==================
