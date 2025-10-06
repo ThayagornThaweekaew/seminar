@@ -19,7 +19,8 @@ app.secret_key = "change_me_to_random_secret"  # เปลี่ยนเป็�
 
 # ---------- DB CONFIG ----------
 DB_CONFIG = {
-    "host": "localhost",
+    "host": "127.0.0.1",
+    "port": 3306,
     "user": "root",
     "password": "จๅจภจถจุ",  # แก้ให้ตรงของคุณ
     "database": "seminar",
