@@ -113,8 +113,6 @@ def user_page():
 def _login_alias():   return redirect(url_for("login_page"))
 @app.route("/signup.html")
 def _signup_alias():  return redirect(url_for("signup_page"))
-@app.route("/dashboard.html")
-def _dash_alias():    return redirect(url_for("index"))
 @app.route("/index.html")
 def _index_alias():   return redirect(url_for("index"))
 @app.route("/plan.html")
