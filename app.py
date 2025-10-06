@@ -108,7 +108,7 @@ def _login_alias():   return redirect(url_for("login_page"))
 @app.route("/signup.html")
 def _signup_alias():  return redirect(url_for("signup_page"))
 @app.route("/dashboard.html")
-def _dash_alias():    return redirect(url_for("dashboard"))
+def _dash_alias():    return redirect(url_for("index"))
 @app.route("/plan.html")
 def _plan_alias():    return redirect(url_for("plan_page"))
 @app.route("/success.html")
@@ -116,8 +116,9 @@ def _success_alias(): return redirect(url_for("success_page"))
 @app.route("/user.html")
 def _user_alias():    return redirect(url_for("user_page"))
 
-# ---------- DASHBOARD (อัปโหลด + โหมดอ่านหนังสือ) ----------
+# ---------- DASHBOARD/INDEX (อัปโหลด + โหมดอ่านหนังสือ) ----------
 @app.route("/dashboard", methods=["GET", "POST"])
+@app.route("/index", methods=["GET", "POST"], endpoint="index")
 def dashboard():
     if "user_id" not in session:
         flash("กรุณาเข้าสู่ระบบก่อน", "error")
@@ -181,7 +182,7 @@ def dashboard():
             return redirect(request.url)
 
     return render_template(
-        "dashboard.html",
+        "index.html",                 # ← เปลี่ยนจาก "dashboard.html"
         reading_text=reading_text,
         download_url=download_url,
         pdf_url=pdf_url
@@ -244,7 +245,7 @@ def login_submit():
         session["role"] = user["role"]
 
         flash("เข้าสู่ระบบสำเร็จ", "success")
-        return redirect(url_for("dashboard"))
+        return redirect(url_for("index"))   # ← เปลี่ยนปลายทางเป็น index
     except mysql.connector.Error as e:
         flash(f"เกิดข้อผิดพลาดฐานข้อมูล: {e}", "error")
         return redirect(url_for("login_page"))

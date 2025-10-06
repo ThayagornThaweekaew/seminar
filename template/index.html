@@ -48,7 +48,7 @@
       <div class="sidebar-section-title">แผนงาน</div>
       <ul class="menu">
         <li class="menu-item">
-          <button class="menu-btn is-active" data-href="{{ url_for('dashboard') }}">
+          <button class="menu-btn is-active" data-href="{{ url_for('index') }}">
             <span class="icon">🏠</span><span class="label">หน้าแรก</span>
           </button>
         </li>
@@ -75,7 +75,7 @@
         <article class="card" style="max-width: 100%; margin: 0 auto; text-align:center; padding: 20px;">
           <div class="card-head"><h2>📚 โหมดอ่านหนังสือ</h2></div>
 
-          <form method="post" action="{{ url_for('dashboard') }}" enctype="multipart/form-data" style="margin: 20px auto; max-width: 520px;">
+          <form method="post" action="{{ url_for('index') }}" enctype="multipart/form-data" style="margin: 20px auto; max-width: 520px;">
             <input type="file" name="file" class="form-control mb-2" />
             <div class="stack" style="gap: 8px; align-items: center;">
               <button type="submit" class="btn success">อัพโหลด</button>
@@ -277,12 +277,12 @@
 
   <!-- Libs แล้วค่อยไฟล์ของเรา -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- ✅ ใส่ MediaPipe ก่อน dashboard.js -->
+  <!-- ✅ ใส่ MediaPipe ก่อน index.js -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
 
-  <!-- ✅ dashboard.js โหลดทีเดียวหลัง MediaPipe -->
-  <script src="{{ url_for('serve_js', filename='dashboard.js') }}" defer></script>
+  <!-- ✅ index.js โหลดทีเดียวหลัง MediaPipe -->
+  <script src="{{ url_for('serve_js', filename='index.js') }}" defer></script>
 </body>
 </html>
