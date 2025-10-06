@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Forgot password</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
   <style>
     /* เล็กน้อยสำหรับสถานะ inline */
     .muted { margin-bottom: 12px; color:#64748b; }
@@ -29,7 +29,7 @@
         <button class="btn primary" type="submit">Send reset link</button>
 
         <p class="new-here">
-          Remembered? <a href="index.html" class="btn-ghost">กลับไปล็อกอิน</a>
+          Remembered? <a href="{{ url_for('login_page') }}" class="btn-ghost">กลับไปล็อกอิน</a>
         </p>
       </form>
 
@@ -142,7 +142,7 @@
       info.style.color = "#16a34a";
       info.textContent = "ตั้งรหัสผ่านใหม่เรียบร้อยแล้ว — กลับไปล็อกอินได้เลย";
       setTimeout(() => {
-        window.location.href = "index.html";
+        window.location.href = "{{ url_for('login_page') }}";
       }, 1200);
     });
 

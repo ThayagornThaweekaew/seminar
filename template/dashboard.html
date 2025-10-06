@@ -207,7 +207,7 @@
       });
     })();
 
-    // เพิ่ม Logout ใน Sidebar (เก็บธีม sb_theme แล้วค่อยล้าง storage)
+    // เพิ่ม Logout ใน Sidebar → เรียก /logout ของเซิร์ฟเวอร์
     (function () {
       const btn = document.getElementById("logoutBtn");
       btn?.addEventListener("click", (e) => {
@@ -217,12 +217,12 @@
           const theme = localStorage.getItem("sb_theme") || document.documentElement.getAttribute("data-theme");
           localStorage.clear(); sessionStorage.clear();
           if (theme) localStorage.setItem("sb_theme", theme);
-        } catch (e) {}
-        window.location.href = "{{ url_for('login_page') }}";
+        } catch (_) {}
+        window.location.href = "{{ url_for('logout') }}";
       });
     })();
 
-    // Theme toggle — เหมือน plan.html ทุกประการ
+    // Theme toggle — เหมือน plan.html
     (function(){
       const THEME_KEY = "sb_theme";
       const themeToggle = document.getElementById("themeToggle");

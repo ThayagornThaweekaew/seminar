@@ -246,7 +246,7 @@ html[data-theme="dark"] *::-webkit-scrollbar-thumb{background:#2a3a59}
 
       <div class="sidebar-card" id="sidebarProfile" title="โปรไฟล์">
         <div class="sidebar-profile">
-          <img src="โปร.jpg" class="avatar" alt="Profile">
+          <img src="{{ url_for('static', filename='โปร.jpg') }}" class="avatar" alt="Profile">
           <div>
             <div class="profile-name">My Profile</div>
             <div class="profile-sub">พร้อมลุยอ่าน! ✨</div>
@@ -259,14 +259,14 @@ html[data-theme="dark"] *::-webkit-scrollbar-thumb{background:#2a3a59}
       <div class="sidebar-section-title">แผนงาน</div>
       <ul class="menu">
         <li class="menu-item">
-          <button class="menu-btn" data-href="dashboard.html">
+          <button class="menu-btn" data-href="{{ url_for('dashboard') }}">
             <span class="icon">🏠</span><span class="label">หน้าแรก</span>
           </button>
         </li>
 
         <!-- หน้านี้คือ plan.html → ใส่ active ไว้ตรงปุ่มนี้ด้วย -->
         <li class="menu-item">
-          <button class="menu-btn is-active" data-href="plan.html">
+          <button class="menu-btn is-active" data-href="{{ url_for('plan_page') }}">
             <span class="icon">🧾</span><span class="label">เพิ่มและดูแผน</span>
           </button>
         </li>
@@ -355,37 +355,37 @@ html[data-theme="dark"] *::-webkit-scrollbar-thumb{background:#2a3a59}
       });
     })();
 
-    // เปิดโปรไฟล์
+    // เปิดโปรไฟล์ → ไปหน้า user (Flask route)
     document.getElementById("sidebarProfile")?.addEventListener("click", (e)=>{
       e.preventDefault();
-      location.href="user.html";
+      location.href="{{ url_for('user_page') }}";
     });
 
-    // เพิ่ม Logout ใน Sidebar (เก็บธีม sb_theme แล้วค่อยล้าง storage)
+    // Logout ผ่านเซิร์ฟเวอร์
     (function(){
       const btn = document.getElementById("logoutBtn");
       btn?.addEventListener("click", (e)=>{
         e.preventDefault();
-        e.stopPropagation(); // กันเด้งไป user.html
+        e.stopPropagation();
         try{
           const theme = localStorage.getItem("sb_theme") || document.documentElement.getAttribute("data-theme");
           localStorage.clear(); sessionStorage.clear();
           if (theme) localStorage.setItem("sb_theme", theme);
-        }catch(e){}
-        location.href = "signin.html";
+        }catch(_){}
+        location.href = "{{ url_for('logout') }}";
       });
     })();
 
     // ย่อ/ขยาย Sidebar
     document.getElementById("sidebarToggle")?.addEventListener("click", ()=>{ document.body.classList.toggle("sidebar-collapsed"); });
 
-    // ========= Auto-active (สำรองให้ถูกต้องแม้ลืมใส่ active ใน HTML) =========
+    // ========= Auto-active (normalize path) =========
     (function markActive(){
-      const file = (location.pathname.split('/').pop() || 'dashboard.html').toLowerCase().split('#')[0].split('?')[0];
-      const alias = { 'reading-plan.html':'plan.html', 'plans.html':'plan.html', 'index.html':'dashboard.html' };
-      const current = alias[file] || file;
+      function norm(p){ try{ return new URL(p, location.origin).pathname.replace(/\/+$/,''); }catch{ return String(p||'').replace(/\/+$/,''); } }
+      const current = norm(location.pathname);
       document.querySelectorAll('.menu-btn[data-href]').forEach(btn=>{
-        btn.classList.toggle('active', (btn.dataset.href||'').toLowerCase() === current);
+        const href = btn.getAttribute('data-href') || '';
+        btn.classList.toggle('active', norm(href) === current);
       });
     })();
 

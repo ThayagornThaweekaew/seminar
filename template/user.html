@@ -160,11 +160,11 @@
       });
     })();
 
-    // ออกจากระบบ (เหมือนเดิม)
+    // ออกจากระบบ (เรียก /logout ของเซิร์ฟเวอร์)
     logoutEl.addEventListener("click", (e)=>{
       e.preventDefault();
       localStorage.removeItem("currentUser");
-      window.location.href = "signin.html";
+      window.location.href = "{{ url_for('logout') }}";
     });
   </script>
 </body>
