@@ -10,11 +10,16 @@ from datetime import datetime
 
 # ---------- พาธหลัก ----------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-JS_DIR   = os.path.join(BASE_DIR, "JS")
+JS_DIR   = BASE_DIR  # ← serve all JS directly from the current folder
 
 # ---------- สร้างแอป ----------
-# HTML ใน "template", CSS ใน "CSS"
-app = Flask(__name__, template_folder="template", static_folder="CSS", static_url_path="/CSS")
+# HTML และไฟล์ static ทั้งหมดอยู่ในโฟลเดอร์ปัจจุบัน
+app = Flask(
+    __name__,
+    template_folder=BASE_DIR,     # ← ใช้โฟลเดอร์ปัจจุบันเป็น template root
+    static_folder=BASE_DIR,       # ← ใช้โฟลเดอร์ปัจจุบันเป็น static root
+    static_url_path="/static"     # ← ไฟล์ static จะเสิร์ฟที่ /static/...
+)
 app.secret_key = "change_me_to_random_secret"  # เปลี่ยนเป็นค่า random ในโปรดักชัน
 
 # ทำให้ session cookie ใช้งานได้ข้ามเครื่อง (LAN) และไม่ cache HTML
@@ -49,7 +54,7 @@ def get_conn():
 @app.route("/js/<path:filename>")
 @app.route("/JS/<path:filename>")
 def serve_js(filename):
-    return send_from_directory(JS_DIR, filename)
+    return send_from_directory(JS_DIR, filename)  # ← จะอ่านไฟล์จากโฟลเดอร์ปัจจุบัน
 
 # ---------- โฟลเดอร์อัปโหลด & ไฟล์ข้อความที่สกัด ----------
 app.config["UPLOAD_FOLDER"] = os.path.join(BASE_DIR, "uploads")
@@ -461,9 +466,4 @@ def delete_plan(pid):
 
 # ================== RUN ==================
 if __name__ == "__main__":
-    # อย่าวาง route/ตั้งค่าเพิ่มเติมไว้ใต้บรรทัดนี้
     app.run(host="0.0.0.0", port=5000, debug=True)
-# ================== APIs for Plan Management ==================
-    # อย่าวาง route/ตั้งค่าเพิ่มเติมไว้ใต้บรรทัดนี้
-    app.run(host="0.0.0.0", port=5000, debug=True)
-# ================== APIs for Plan Management ==================

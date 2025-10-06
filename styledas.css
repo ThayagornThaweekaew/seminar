@@ -1088,9 +1088,9 @@ body.paused {
 /* Active pill — รองรับ .active / .is-active / data-page */
 .sidebar .menu .menu-btn.active,
 .sidebar .menu .menu-btn.is-active,
-body[data-page="dashboard"] .sidebar .menu .menu-btn[data-href="dashboard.html"],
-body[data-page="plan"]      .sidebar .menu .menu-btn[data-href="plan.html"],
-body[data-page="success"]   .sidebar .menu .menu-btn[data-href="success.html"]{
+body[data-page="index"]     .sidebar .menu .menu-btn[data-href="/index"],
+body[data-page="plan"]      .sidebar .menu .menu-btn[data-href="/plan"],
+body[data-page="success"]   .sidebar .menu .menu-btn[data-href="/success"]{
   background: var(--accent, #6366f1) !important;  /* ใช้ --accent ถ้ากำหนดไว้ */
   color: #fff !important;
   text-decoration: none !important;
@@ -1211,8 +1211,11 @@ html[data-theme="dark"] .sidebar-profile .avatar{ background:#223; }
 .sidebar .menu .menu-btn:hover{ color:#394360; }
 
 .sidebar .menu .menu-btn.active,
-.sidebar .menu .menu-btn.is-active{
-  background:var(--sb-accent); color:var(--sb-accent-ink);
+.sidebar .menu .menu-btn.is-active,
+body[data-page="index"]     .sidebar .menu .menu-btn[data-href="/index"],
+body[data-page="plan"]      .sidebar .menu .menu-btn[data-href="/plan"],
+body[data-page="success"]   .sidebar .menu .menu-btn[data-href="/success"]{
+  background: var(--sb-accent); color: var(--sb-accent-ink);
   text-decoration:none; box-shadow:0 10px 24px rgba(99,102,241,.25);
 }
 

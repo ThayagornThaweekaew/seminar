@@ -1,15 +1,3 @@
-// Deprecated: replaced by index.js
-(function(){
-  try{
-    const s = document.createElement('script');
-    s.src = '/JS/index.js';
-    s.defer = true;
-    (document.head || document.documentElement).appendChild(s);
-    console.warn('[StudyBoard] dashboard.js is deprecated. Use index.js instead.');
-  }catch(e){
-    console.error('Failed to load index.js from dashboard.js shim', e);
-  }
-})();
 const sessionsEl = document.getElementById("sessions");
 const subjectsCountEl = document.getElementById("subjectsCount");
 const progressBar = document.getElementById("progressBar");
