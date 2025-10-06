@@ -71,7 +71,8 @@ def extracted_file(filename):
 # ================== PAGES ==================
 @app.route("/")
 def home():
-    return redirect(url_for("login_page"))
+    # ถ้าเข้าสู่ระบบแล้ว ไปหน้า index เลย ไม่ต้องวนกลับ login
+    return redirect(url_for("index") if "user_id" in session else url_for("login_page"))
 
 @app.route("/login", methods=["GET"])
 def login_page():
@@ -109,6 +110,8 @@ def _login_alias():   return redirect(url_for("login_page"))
 def _signup_alias():  return redirect(url_for("signup_page"))
 @app.route("/dashboard.html")
 def _dash_alias():    return redirect(url_for("index"))
+@app.route("/index.html")
+def _index_alias():   return redirect(url_for("index"))
 @app.route("/plan.html")
 def _plan_alias():    return redirect(url_for("plan_page"))
 @app.route("/success.html")
@@ -339,6 +342,24 @@ def api_get_logs():
 def get_user():
     return session.get("user_id", 1)
 
+# ช่วยหา/สร้าง subjectID จากชื่อวิชา
+def ensure_subject(name: str):
+    name = (name or "").strip()
+    if not name:
+        return None
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT subjectID FROM subject WHERE subjectname=%s", (name,))
+        row = cur.fetchone()
+        if row:
+            return row[0]
+        cur.execute("INSERT INTO subject (subjectname) VALUES (%s)", (name,))
+        conn.commit()
+        return cur.lastrowid
+    finally:
+        try: cur.close(); conn.close()
+        except: pass
+
 @app.route("/api/plans", methods=["GET"])
 def list_plans():
     """ดึงแผนการอ่านทั้งหมดของ user"""
@@ -363,7 +384,13 @@ def create_plan():
     data = request.get_json() or {}
     planname = data.get("planname", "").strip()
     dateplan = data.get("dateplan")
+    # รองรับ subject ได้ทั้งแบบ subjectID และชื่อวิชา (subject)
     subjectID = data.get("subjectID")
+    if not subjectID and data.get("subject"):
+        try:
+            subjectID = ensure_subject(data.get("subject"))
+        except Exception:
+            subjectID = None
     description = data.get("description", "").strip()
     priority = data.get("priority", "ปกติ")
     if not planname or not dateplan:
@@ -400,8 +427,13 @@ def update_plan(pid):
     if "is_done" in data:
         vals.append(1 if data["is_done"] else 0)
         fields.append("is_done=%s")
-    if "subjectID" in data:
+    # รองรับทั้ง subjectID และชื่อวิชา
+    if "subjectID" in data and data["subjectID"]:
         vals.append(data["subjectID"]); fields.append("subjectID=%s")
+    elif "subject" in data:
+        sid = ensure_subject(data.get("subject"))
+        if sid:
+            vals.append(sid); fields.append("subjectID=%s")
     if not fields:
         return jsonify({"error":"no update"}),400
 
@@ -429,6 +461,9 @@ def delete_plan(pid):
 
 # ================== RUN ==================
 if __name__ == "__main__":
+    # อย่าวาง route/ตั้งค่าเพิ่มเติมไว้ใต้บรรทัดนี้
+    app.run(host="0.0.0.0", port=5000, debug=True)
+# ================== APIs for Plan Management ==================
     # อย่าวาง route/ตั้งค่าเพิ่มเติมไว้ใต้บรรทัดนี้
     app.run(host="0.0.0.0", port=5000, debug=True)
 # ================== APIs for Plan Management ==================

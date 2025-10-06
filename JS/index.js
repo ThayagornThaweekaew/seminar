@@ -1,16 +1,15 @@
-/* ========= DOM ========= */
-const display = document.getElementById("display");
-const startBtn = document.getElementById("startBtn");
-const pauseBtn = document.getElementById("pauseBtn");
-const stopBtn  = document.getElementById("stopBtn");
-
-const timeSelect = document.getElementById("timeSelect");
-const subjectSelect = document.getElementById("subjectSelect");
-const newSubjectInput = document.getElementById("newSubject");
-const addSubjectBtn = document.getElementById("addSubjectBtn");
-
-const totalTimeEl = document.getElementById("totalTime");
-const todayTimeEl = document.getElementById("todayTime");
+// Deprecated: replaced by index.js
+(function(){
+  try{
+    const s = document.createElement('script');
+    s.src = '/JS/index.js';
+    s.defer = true;
+    (document.head || document.documentElement).appendChild(s);
+    console.warn('[StudyBoard] dashboard.js is deprecated. Use index.js instead.');
+  }catch(e){
+    console.error('Failed to load index.js from dashboard.js shim', e);
+  }
+})();
 const sessionsEl = document.getElementById("sessions");
 const subjectsCountEl = document.getElementById("subjectsCount");
 const progressBar = document.getElementById("progressBar");
@@ -399,6 +398,11 @@ setInterval(()=>{ const idleSec=Math.floor((Date.now()-idleStart)/1000);
 startBtn?.addEventListener("click", startTimer);
 pauseBtn?.addEventListener("click", pauseTimer);
 stopBtn?.addEventListener("click", stopTimer);
+
+// ทำให้เรียกใช้ได้จาก callback อื่นๆ ได้เสมอ
+window.startTimer = startTimer;
+window.pauseTimer = pauseTimer;
+window.stopTimer = stopTimer;
 
 /* ---------- Init ---------- */
 async function init(){

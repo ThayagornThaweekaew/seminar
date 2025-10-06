@@ -93,9 +93,9 @@ html[data-theme="dark"]
 /* Active = เม็ดม่วงโค้งมน (ทั้ง .active/.is-active + data-page) */
 .menu .menu-btn.active,
 .menu .menu-btn.is-active,
-body[data-page="dashboard"] .menu .menu-btn[data-href="dashboard.html"],
-body[data-page="plan"]      .menu .menu-btn[data-href="plan.html"],
-body[data-page="success"]   .menu .menu-btn[data-href="success.html"]{
+body[data-page="index"]    .menu .menu-btn[data-href="{{ url_for('index') }}"],
+body[data-page="plan"]     .menu .menu-btn[data-href="{{ url_for('plan_page') }}"],
+body[data-page="success"]  .menu .menu-btn[data-href="success.html"]{
   background:var(--sb-accent); color:var(--sb-accent-ink);
   text-decoration:none; box-shadow:0 10px 24px rgba(99,102,241,.25);
 }
@@ -393,12 +393,12 @@ html[data-theme="dark"] *::-webkit-scrollbar-thumb{background:#2a3a59}
         btn.classList.toggle('active', norm(href) === current);
       });
     })();
+  </script>
 
-    // ========= Demo logic: storage + render =========
-    const STORAGE_KEY="studyboard_reading_plans", META_KEY="studyboard_meta";
-    let plans=[]; try{plans=JSON.parse(localStorage.getItem(STORAGE_KEY))||[]}catch{}
-    let meta={streakDays:0,lastReadDate:null}; try{meta=Object.assign(meta,JSON.parse(localStorage.getItem(META_KEY))||{})}catch{}
-    const save=()=>localStorage.setItem(STORAGE_KEY,JSON.stringify(plans));
+  <!-- ใช้ backend จริงผ่าน plan.js -->
+  <script src="{{ url_for('serve_js', filename='plan.js') }}" defer></script>
+</body>
+</html>
     const saveMeta=()=>localStorage.setItem(META_KEY,JSON.stringify(meta));
     const $=id=>document.getElementById(id);
 
