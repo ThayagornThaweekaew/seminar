@@ -237,6 +237,19 @@ def whoami():
         "username": session.get("username"),
         "role": session.get("role")
     }
+@app.route("/forgot", methods=["GET"])
+def forgot_page():
+    # ใช้ forgot1.html ที่คุณมีอยู่แล้ว
+    return render_template("forgot1.html")
+
+# aliases ให้พิมพ์ /forgot1.html หรือ /forgot.html ก็มาได้
+@app.route("/forgot1.html")
+def _forgot1_alias():
+    return redirect(url_for("forgot_page"))
+
+@app.route("/forgot.html")
+def _forgot_alias():
+    return redirect(url_for("forgot_page"))
 
 # ---------- RUN ----------
 if __name__ == "__main__":
