@@ -10,22 +10,20 @@ from datetime import datetime
 
 # ---------- พาธหลัก ----------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-JS_DIR   = BASE_DIR  # ← serve all JS directly from the current folder
+JS_DIR   = BASE_DIR  # ใช้เสิร์ฟ JS จากโฟลเดอร์เดียวกัน
 
 # ---------- สร้างแอป ----------
-# HTML และไฟล์ static ทั้งหมดอยู่ในโฟลเดอร์ปัจจุบัน
 app = Flask(
     __name__,
-    template_folder=BASE_DIR,     # ← ใช้โฟลเดอร์ปัจจุบันเป็น template root
-    static_folder=BASE_DIR,       # ← ใช้โฟลเดอร์ปัจจุบันเป็น static root
-    static_url_path="/static"     # ← ไฟล์ static จะเสิร์ฟที่ /static/...
+    template_folder=BASE_DIR,     
+    static_folder=BASE_DIR,       
+    static_url_path="/static"     
 )
-app.secret_key = "change_me_to_random_secret"  # เปลี่ยนเป็นค่า random ในโปรดักชัน
+app.secret_key = "change_me_to_random_secret"
 
-# ทำให้ session cookie ใช้งานได้ข้ามเครื่อง (LAN) และไม่ cache HTML
 app.config.update(
     SESSION_COOKIE_SAMESITE="Lax",
-    SESSION_COOKIE_SECURE=False,   # ใช้ True เมื่อรัน HTTPS
+    SESSION_COOKIE_SECURE=False,
     SESSION_COOKIE_HTTPONLY=True,
 )
 
@@ -40,7 +38,7 @@ def _no_cache_html(resp):
 
 # ---------- DB CONFIG ----------
 DB_CONFIG = {
-    "host": "192.168.1.4",
+    "host": "127.0.0.1",
     "port": 3306,
     "user": "root",
     "password": "จๅจภจถจุ",  # แก้ให้ตรงของคุณ
@@ -54,9 +52,9 @@ def get_conn():
 @app.route("/js/<path:filename>")
 @app.route("/JS/<path:filename>")
 def serve_js(filename):
-    return send_from_directory(JS_DIR, filename)  # ← จะอ่านไฟล์จากโฟลเดอร์ปัจจุบัน
+    return send_from_directory(JS_DIR, filename)
 
-# ---------- โฟลเดอร์อัปโหลด & ไฟล์ข้อความที่สกัด ----------
+# ---------- อัปโหลด ----------
 app.config["UPLOAD_FOLDER"] = os.path.join(BASE_DIR, "uploads")
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
@@ -65,18 +63,15 @@ os.makedirs(EXTRACT_FOLDER, exist_ok=True)
 
 @app.route("/uploads/<path:filename>")
 def uploaded_file(filename):
-    # ใช้สำหรับแสดง PDF ใน iframe
     return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
 
 @app.route("/extracted/<path:filename>")
 def extracted_file(filename):
-    # ดาวน์โหลดไฟล์ข้อความที่สกัด (txt)
     return send_from_directory(EXTRACT_FOLDER, filename, as_attachment=True)
 
-# ================== PAGES ==================
+# ---------- PAGES ----------
 @app.route("/")
 def home():
-    # ถ้าเข้าสู่ระบบแล้ว ไปหน้า index เลย ไม่ต้องวนกลับ login
     return redirect(url_for("index") if "user_id" in session else url_for("login_page"))
 
 @app.route("/login", methods=["GET"])
@@ -108,30 +103,16 @@ def user_page():
         return redirect(url_for("login_page"))
     return render_template("user.html")
 
-# (aliases *.html)
-@app.route("/login.html")
-def _login_alias():   return redirect(url_for("login_page"))
-@app.route("/signup.html")
-def _signup_alias():  return redirect(url_for("signup_page"))
-@app.route("/index.html")
-def _index_alias():   return redirect(url_for("index"))
-@app.route("/plan.html")
-def _plan_alias():    return redirect(url_for("plan_page"))
-@app.route("/success.html")
-def _success_alias(): return redirect(url_for("success_page"))
-@app.route("/user.html")
-def _user_alias():    return redirect(url_for("user_page"))
-
-# ---------- INDEX (อัปโหลด + โหมดอ่านหนังสือ) ----------
+# ---------- INDEX ----------
 @app.route("/index", methods=["GET", "POST"])
 def index():
     if "user_id" not in session:
         flash("กรุณาเข้าสู่ระบบก่อน", "error")
         return redirect(url_for("login_page"))
 
-    reading_text = None   # ข้อความล้วน ที่แสดงในโหมดอ่านหนังสือ
-    download_url = None   # ลิงก์ดาวน์โหลดไฟล์ .txt ที่สกัด
-    pdf_url = None        # สำหรับแสดงตัวอย่าง PDF (ถ้าอยากเปิดดูคู่กัน)
+    reading_text = None
+    download_url = None
+    pdf_url = None
 
     if request.method == "POST":
         if "file" not in request.files or request.files["file"].filename == "":
@@ -144,36 +125,28 @@ def index():
         f.save(path)
 
         ext = os.path.splitext(filename)[1].lower()
-
         try:
             if ext == ".txt":
                 with open(path, "r", encoding="utf-8", errors="ignore") as fh:
                     reading_text = fh.read()
-
             elif ext == ".csv":
                 df = pd.read_csv(path)
-                # แปลงตารางเป็นข้อความอ่านง่าย
                 reading_text = df.to_string(index=False)
-
             elif ext in [".xls", ".xlsx"]:
                 df = pd.read_excel(path)
                 reading_text = df.to_string(index=False)
-
             elif ext == ".pdf":
                 pdf_url = url_for("uploaded_file", filename=filename)
                 reader = PdfReader(path)
                 pieces = []
-                # ถ้าไฟล์ใหญ่มาก ปรับ min(len, 10) เพื่อเร็วขึ้นได้
                 for i in range(len(reader.pages)):
                     text = reader.pages[i].extract_text() or ""
                     pieces.append(text.strip())
                 reading_text = "\n\n".join(pieces).strip()
-
             else:
                 flash("รองรับเฉพาะ .txt, .csv, .xls, .xlsx, .pdf", "warning")
                 return redirect(request.url)
 
-            # สร้างไฟล์ข้อความที่สกัด เพื่อให้กดโหลดได้
             if reading_text:
                 base = os.path.splitext(os.path.basename(filename))[0]
                 outname = f"{base}_extracted_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
@@ -181,24 +154,13 @@ def index():
                 with open(outpath, "w", encoding="utf-8", errors="ignore") as out:
                     out.write(reading_text)
                 download_url = url_for("extracted_file", filename=outname)
-
         except Exception as e:
             flash(f"เกิดข้อผิดพลาดในการอ่านไฟล์: {e}", "error")
             return redirect(request.url)
 
-    return render_template(
-        "index.html",
-        reading_text=reading_text,
-        download_url=download_url,
-        pdf_url=pdf_url
-    )
+    return render_template("index.html", reading_text=reading_text, download_url=download_url, pdf_url=pdf_url)
 
-# รองรับลิงก์เก่า /dashboard และคง method เดิมไว้ (เช่น POST อัปโหลดไฟล์)
-@app.route("/dashboard", methods=["GET", "POST"])
-def dashboard_alias():
-    return redirect(url_for("index"), code=307)
-
-# ================== AUTH ==================
+# ---------- AUTH ----------
 @app.route("/signup", methods=["POST"])
 def signup_submit():
     username = request.form.get("username", "").strip()
@@ -226,7 +188,6 @@ def signup_submit():
             VALUES (%s, %s, %s, %s)
         """, (username, email, pwd_hash, "Member"))
         conn.commit()
-
         flash("สมัครสมาชิกสำเร็จ! เข้าสู่ระบบได้เลย", "success")
         return redirect(url_for("login_page"))
     except mysql.connector.Error as e:
@@ -240,7 +201,6 @@ def signup_submit():
 def login_submit():
     email = request.form.get("email", "").strip().lower()
     password = request.form.get("password", "")
-
     try:
         conn = get_conn(); cur = conn.cursor(dictionary=True)
         cur.execute("SELECT userID, username, password, role FROM user_login WHERE email=%s", (email,))
@@ -254,8 +214,9 @@ def login_submit():
         session["username"] = user["username"]
         session["role"] = user["role"]
 
+        app.logger.info("LOGIN OK user_id=%s", session.get("user_id"))
         flash("เข้าสู่ระบบสำเร็จ", "success")
-        return redirect(url_for("index"))   # ← เปลี่ยนปลายทางเป็น index
+        return redirect(url_for("index"))
     except mysql.connector.Error as e:
         flash(f"เกิดข้อผิดพลาดฐานข้อมูล: {e}", "error")
         return redirect(url_for("login_page"))
@@ -268,200 +229,15 @@ def logout():
     session.clear()
     return redirect(url_for("login_page"))
 
-# ================== APIs ==================
-@app.route("/api/subjects", methods=["GET"])
-def api_get_subjects():
-    try:
-        conn = get_conn(); cur = conn.cursor(dictionary=True)
-        cur.execute("SELECT subjectID, subjectname FROM subject ORDER BY subjectname")
-        rows = cur.fetchall()
-        return jsonify(rows)
-    finally:
-        try: cur.close(); conn.close()
-        except: pass
+# ---------- DEBUG: ตรวจ session ----------
+@app.route("/whoami")
+def whoami():
+    return {
+        "user_id": session.get("user_id"),
+        "username": session.get("username"),
+        "role": session.get("role")
+    }
 
-@app.route("/api/subjects", methods=["POST"])
-def api_add_subject():
-    data = request.get_json(silent=True) or {}
-    name = (data.get("name") or "").strip()
-    if not name:
-        return jsonify({"error": "กรอกชื่อวิชาก่อน"}), 400
-    try:
-        conn = get_conn(); cur = conn.cursor()
-        cur.execute("INSERT INTO subject (subjectname) VALUES (%s)", (name,))
-        conn.commit()
-        return jsonify({"subjectID": cur.lastrowid, "subjectname": name}), 201
-    except mysql.connector.Error as e:
-        return jsonify({"error": str(e)}), 500
-    finally:
-        try: cur.close(); conn.close()
-        except: pass
-
-@app.route("/api/log", methods=["POST"])
-def api_log_session():
-    if "user_id" not in session:
-        return jsonify({"error": "unauthorized"}), 401
-
-    data = request.get_json(silent=True) or {}
-    subjectID = data.get("subjectID")
-    timer_min = data.get("timer")
-
-    if not subjectID or timer_min in (None, ""):
-        return jsonify({"error": "ข้อมูลไม่ครบ"}), 400
-
-    try:
-        conn = get_conn(); cur = conn.cursor()
-        cur.execute("""
-            INSERT INTO dashboard (userID, subjectID, timer, Date)
-            VALUES (%s, %s, %s, NOW())
-        """, (session["user_id"], int(subjectID), int(timer_min)))
-        conn.commit()
-        return jsonify({"ok": True}), 201
-    except mysql.connector.Error as e:
-        return jsonify({"error": str(e)}), 500
-    finally:
-        try: cur.close(); conn.close()
-        except: pass
-
-@app.route("/api/logs", methods=["GET"])
-def api_get_logs():
-    if "user_id" not in session:
-        return jsonify({"error": "unauthorized"}), 401
-    try:
-        conn = get_conn(); cur = conn.cursor(dictionary=True)
-        cur.execute("""
-            SELECT d.Date, d.timer, s.subjectname
-            FROM dashboard d
-            LEFT JOIN subject s ON s.subjectID = d.subjectID
-            WHERE d.userID=%s
-            ORDER BY d.Date DESC
-            LIMIT 50
-        """, (session["user_id"],))
-        return jsonify(cur.fetchall())
-    finally:
-        try: cur.close(); conn.close()
-        except: pass
-        
-def get_user():
-    return session.get("user_id", 1)
-
-# ช่วยหา/สร้าง subjectID จากชื่อวิชา
-def ensure_subject(name: str):
-    name = (name or "").strip()
-    if not name:
-        return None
-    conn = get_conn(); cur = conn.cursor()
-    try:
-        cur.execute("SELECT subjectID FROM subject WHERE subjectname=%s", (name,))
-        row = cur.fetchone()
-        if row:
-            return row[0]
-        cur.execute("INSERT INTO subject (subjectname) VALUES (%s)", (name,))
-        conn.commit()
-        return cur.lastrowid
-    finally:
-        try: cur.close(); conn.close()
-        except: pass
-
-@app.route("/api/plans", methods=["GET"])
-def list_plans():
-    """ดึงแผนการอ่านทั้งหมดของ user"""
-    uid = get_user()
-    conn = get_conn(); cur = conn.cursor(dictionary=True)
-    cur.execute("""
-        SELECT p.planID, p.planname, p.priority, p.dateplan, p.description,
-               p.is_done, s.subjectname
-        FROM plan p
-        LEFT JOIN subject s ON p.subjectID=s.subjectID
-        WHERE p.userID=%s
-        ORDER BY p.dateplan ASC
-    """, (uid,))
-    rows = cur.fetchall()
-    cur.close(); conn.close()
-    return jsonify(rows)
-
-@app.route("/api/plans", methods=["POST"])
-def create_plan():
-    """เพิ่มแผนใหม่"""
-    uid = get_user()
-    data = request.get_json() or {}
-    planname = data.get("planname", "").strip()
-    dateplan = data.get("dateplan")
-    # รองรับ subject ได้ทั้งแบบ subjectID และชื่อวิชา (subject)
-    subjectID = data.get("subjectID")
-    if not subjectID and data.get("subject"):
-        try:
-            subjectID = ensure_subject(data.get("subject"))
-        except Exception:
-            subjectID = None
-    description = data.get("description", "").strip()
-    priority = data.get("priority", "ปกติ")
-    if not planname or not dateplan:
-        return jsonify({"error": "ต้องใส่ชื่อแผนและวันที่"}), 400
-    try:
-        dt = datetime.fromisoformat(dateplan)
-    except:
-        return jsonify({"error": "รูปแบบวันที่ไม่ถูกต้อง"}), 400
-
-    conn = get_conn(); cur = conn.cursor()
-    cur.execute("""
-        INSERT INTO plan (userID, planname, priority, dateplan, subjectID, description, is_done)
-        VALUES (%s,%s,%s,%s,%s,%s,%s)
-    """, (uid, planname, priority, dt, subjectID, description, 0))
-    conn.commit()
-    pid = cur.lastrowid
-    cur.close(); conn.close()
-    return jsonify({"ok": True, "planID": pid})
-
-@app.route("/api/plans/<int:pid>", methods=["PUT"])
-def update_plan(pid):
-    """แก้ไขแผน"""
-    uid = get_user()
-    data = request.get_json() or {}
-    fields, vals = [], []
-    for col in ["planname","priority","description"]:
-        if col in data: fields.append(f"{col}=%s"); vals.append(data[col])
-    if "dateplan" in data:
-        try:
-            vals.append(datetime.fromisoformat(data["dateplan"]))
-            fields.append("dateplan=%s")
-        except:
-            return jsonify({"error":"date format"}),400
-    if "is_done" in data:
-        vals.append(1 if data["is_done"] else 0)
-        fields.append("is_done=%s")
-    # รองรับทั้ง subjectID และชื่อวิชา
-    if "subjectID" in data and data["subjectID"]:
-        vals.append(data["subjectID"]); fields.append("subjectID=%s")
-    elif "subject" in data:
-        sid = ensure_subject(data.get("subject"))
-        if sid:
-            vals.append(sid); fields.append("subjectID=%s")
-    if not fields:
-        return jsonify({"error":"no update"}),400
-
-    vals += [uid, pid]
-    conn = get_conn(); cur = conn.cursor()
-    cur.execute(f"UPDATE plan SET {','.join(fields)} WHERE userID=%s AND planID=%s", vals)
-    conn.commit()
-    ok = cur.rowcount
-    cur.close(); conn.close()
-    if not ok: return jsonify({"error":"not found"}),404
-    return jsonify({"ok":True})
-
-@app.route("/api/plans/<int:pid>", methods=["DELETE"])
-def delete_plan(pid):
-    """ลบแผน"""
-    uid = get_user()
-    conn = get_conn(); cur = conn.cursor()
-    cur.execute("DELETE FROM plan WHERE userID=%s AND planID=%s",(uid,pid))
-    conn.commit()
-    ok=cur.rowcount
-    cur.close(); conn.close()
-    if not ok: return jsonify({"error":"not found"}),404
-    return jsonify({"ok":True})
-# ==================   ==================
-
-# ================== RUN ==================
+# ---------- RUN ----------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

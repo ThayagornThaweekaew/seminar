@@ -12,25 +12,36 @@
       <h1 class="title">Welcome back</h1>
       <p class="muted">Sign in to continue</p>
 
-     <form class="grid" action="{{ url_for('login_submit') }}" method="post">
-  <label class="field">
-    <span class="label">Email</span>
-    <input class="input" type="email" name="email" placeholder="you@example.com" required />
-  </label>
+      {% with msgs = get_flashed_messages(with_categories=true) %}
+        {% if msgs %}
+          <ul class="flash" role="status" aria-live="polite">
+            {% for cat, msg in msgs %}
+              <li class="flash-{{cat}}">{{ msg }}</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      {% endwith %}
 
-  <label class="field">
-    <span class="label">Password</span>
-    <input class="input" type="password" name="password" placeholder="••••••••" minlength="8" required />
-  </label>
+      <form class="grid" action="{{ url_for('login_submit') }}" method="post">
+        <label class="field">
+          <span class="label">Email</span>
+          <input class="input" type="email" name="email" placeholder="you@example.com" required />
+        </label>
 
-  <button class="btn primary" type="submit">Sign in</button>
+        <label class="field">
+          <span class="label">Password</span>
+          <input class="input" type="password" name="password" placeholder="••••••••" minlength="8" required />
+        </label>
 
-  <p class="new-here">
-    New here?
-    <a href="{{ url_for('signup_page') }}" class="btn-ghost">Create an account</a>
-  </p>
-</form>
+        <button class="btn primary" type="submit">Sign in</button>
 
+        <p class="new-here">
+          New here?
+          <a href="{{ url_for('signup_page') }}" class="btn-ghost">Create an account</a>
+          &nbsp;·&nbsp;
+          <a href="{{ url_for('forgot1.html') }}">ลืมรหัสผ่าน?</a>
+        </p>
+      </form>
     </section>
   </main>
 </body>
