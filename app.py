@@ -426,5 +426,5 @@ def delete_plan(pid):
 # ================== RUN ==================
 if __name__ == "__main__":
     # อย่าวาง route/ตั้งค่าเพิ่มเติมไว้ใต้บรรทัดนี้
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="127.0.0.1", port=5000, debug=True)
 # ================== APIs for Plan Management ==================
