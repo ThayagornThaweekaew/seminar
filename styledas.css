@@ -1363,3 +1363,25 @@ body.has-sidebar.sidebar-collapsed .theme-toggle .label{
 /* ทรานซิชันลื่นตา */
 body.has-sidebar,
 .sidebar{ transition: all .25s ease; }
+/* ===== PDF Viewer — Full Width, No Border ===== */
+.pdf-viewer {
+  margin-top: 20px;
+  background: var(--surface, #fff);
+  border-radius: 0;
+  padding: 0;
+}
+
+.pdf-viewer h4 {
+  margin-bottom: 10px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent, #6366f1);
+}
+
+.pdf-frame {
+  width: 100%;
+  height: 85vh;          /* เต็มหน้าจอเกือบสุด */
+  border: none;          /* เอากรอบออก */
+  box-shadow: 0 0 16px rgba(0, 0, 0, 0.08); /* เงานุ่มๆ */
+  border-radius: 12px;   /* มุมโค้งสวย */
+}

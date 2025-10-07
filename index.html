@@ -105,11 +105,16 @@
           {% endif %}
 
           {% if pdf_url %}
-            <h4 style="margin-top:16px; text-align:left;">📄 ตัวอย่าง PDF</h4>
-            <div style="border:1px solid var(--soft, #eef2f7); border-radius:12px; overflow:hidden;">
-              <iframe src="{{ pdf_url }}" style="width:100%; height:600px; border:0;" title="PDF preview"></iframe>
-            </div>
-          {% endif %}
+  <section class="pdf-viewer">
+    <h4>📄 ตัวอย่างไฟล์ PDF</h4>
+    <iframe
+      src="{{ pdf_url }}"
+      class="pdf-frame"
+      title="PDF Preview">
+    </iframe>
+  </section>
+{% endif %}
+
         </article>
       </div>
 

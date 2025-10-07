@@ -287,4 +287,4 @@ def dbping():
 # ---------- RUN ----------
 if __name__ == "__main__":
     # หมายเหตุ: ถ้าจะให้เครื่องอื่นเข้าเว็บ Flask ได้ ให้ run แบบ host=0.0.0.0
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True, ssl_context="adhoc")
