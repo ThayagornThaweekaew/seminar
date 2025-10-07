@@ -164,8 +164,32 @@
 
           <div class="log">
             <h3>📊 เวลาสะสมต่อวิชา</h3>
-            <ul id="subjectLog"></ul>
+
+            <!-- รวมทุกวิชา -->
+            <p style="margin:6px 0 10px;">
+              รวมทั้งหมด: <strong id="grandTotal">0 นาที</strong>
+            </p>
+
+            <!-- ตารางสรุปเวลาต่อวิชา -->
+            <table id="subjectTotals" class="table" style="width:100%;">
+              <thead>
+                <tr>
+                  <th style="text-align:left;">วิชา</th>
+                  <th style="text-align:right;">เวลาสะสม</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="2">กำลังโหลด...</td></tr>
+              </tbody>
+            </table>
+
+            <!-- กราฟแท่งเวลาต่อวิชา -->
+            <div style="margin-top:12px;">
+              <canvas id="focusChart" height="200"></canvas>
+            </div>
           </div>
+
+
         </article>
       </aside>
     </section>
