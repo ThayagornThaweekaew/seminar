@@ -5,12 +5,16 @@ from flask import (
 import mysql.connector, os
 from werkzeug.security import generate_password_hash, check_password_hash
 import pandas as pd
-from PyPDF2 import PdfReader
 from datetime import datetime
 
 # ---------- พาธหลัก ----------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 JS_DIR   = BASE_DIR  # ใช้เสิร์ฟ JS จากโฟลเดอร์เดียวกัน
+
+# ---------- โฟลเดอร์อัปโหลด ----------
+UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+ALLOWED_EXTS = {".pdf"}
 
 # ---------- สร้างแอป ----------
 app = Flask(
@@ -26,6 +30,8 @@ app.config.update(
     SESSION_COOKIE_SECURE=False,
     SESSION_COOKIE_HTTPONLY=True,
 )
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+
 
 @app.after_request
 def _no_cache_html(resp):
@@ -36,36 +42,23 @@ def _no_cache_html(resp):
         pass
     return resp
 
-# ---------- DB CONFIG: รองรับทั้ง local และ remote (SERVER_IP = 192.168.1.4) ----------
-SERVER_IP = "192.168.1.4"  # <-- ใส่ IP เครื่องที่รัน MySQL ของคุณ
+# ---------- DB CONFIG ----------
+SERVER_IP = "192.168.1.4"
 
-# ค่าพื้นฐานร่วม (แนะนำให้เปลี่ยนเป็น appuser+รหัสแข็งแรงในโปรดักชัน)
 BASE_DB = {
     "port": 3306,
     "user": "root",
-    "password": "จๅจภจถจุ",           # แก้ให้ตรงของคุณ
+    "password": "จๅจภจถจุ",
     "database": "seminar",
     "auth_plugin": "mysql_native_password",
     "connection_timeout": 5,
 }
 
 def get_conn():
-    """
-    ลำดับการเชื่อมต่อ:
-    1) 127.0.0.1  (กรณี Flask และ MySQL อยู่เครื่องเดียวกัน)
-    2) SERVER_IP  (กรณีรันจากเครื่องอื่นใน LAN)
-    """
-    last_err = None
     try:
         return mysql.connector.connect(host="127.0.0.1", **BASE_DB)
-    except mysql.connector.Error as e1:
-        last_err = e1
-        try:
-            return mysql.connector.connect(host=SERVER_IP, **BASE_DB)
-        except mysql.connector.Error as e2:
-            last_err = e2
-    # ถ้าไม่สำเร็จทั้งสองแบบ โยน error ออกไปเพื่อให้เห็นสาเหตุจริงในหน้า /dbping หรือ log
-    raise last_err
+    except mysql.connector.Error:
+        return mysql.connector.connect(host=SERVER_IP, **BASE_DB)
 
 # ---------- เสิร์ฟไฟล์ JS ----------
 @app.route("/js/<path:filename>")
@@ -73,20 +66,10 @@ def get_conn():
 def serve_js(filename):
     return send_from_directory(JS_DIR, filename)
 
-# ---------- อัปโหลด ----------
-app.config["UPLOAD_FOLDER"] = os.path.join(BASE_DIR, "uploads")
-os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
-
-EXTRACT_FOLDER = os.path.join(app.config["UPLOAD_FOLDER"], "extracted")
-os.makedirs(EXTRACT_FOLDER, exist_ok=True)
-
+# ---------- เสิร์ฟไฟล์อัปโหลด ----------
 @app.route("/uploads/<path:filename>")
 def uploaded_file(filename):
-    return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
-
-@app.route("/extracted/<path:filename>")
-def extracted_file(filename):
-    return send_from_directory(EXTRACT_FOLDER, filename, as_attachment=True)
+    return send_from_directory(app.config["UPLOAD_FOLDER"], filename, mimetype="application/pdf", as_attachment=False)
 
 # ---------- PAGES ----------
 @app.route("/")
@@ -129,8 +112,6 @@ def index():
         flash("กรุณาเข้าสู่ระบบก่อน", "error")
         return redirect(url_for("login_page"))
 
-    reading_text = None
-    download_url = None
     pdf_url = None
 
     if request.method == "POST":
@@ -140,44 +121,17 @@ def index():
 
         f = request.files["file"]
         filename = f.filename
-        path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-        f.save(path)
-
         ext = os.path.splitext(filename)[1].lower()
-        try:
-            if ext == ".txt":
-                with open(path, "r", encoding="utf-8", errors="ignore") as fh:
-                    reading_text = fh.read()
-            elif ext == ".csv":
-                df = pd.read_csv(path)
-                reading_text = df.to_string(index=False)
-            elif ext in [".xls", ".xlsx"]:
-                df = pd.read_excel(path)
-                reading_text = df.to_string(index=False)
-            elif ext == ".pdf":
-                pdf_url = url_for("uploaded_file", filename=filename)
-                reader = PdfReader(path)
-                pieces = []
-                for i in range(len(reader.pages)):
-                    text = reader.pages[i].extract_text() or ""
-                    pieces.append(text.strip())
-                reading_text = "\n\n".join(pieces).strip()
-            else:
-                flash("รองรับเฉพาะ .txt, .csv, .xls, .xlsx, .pdf", "warning")
-                return redirect(request.url)
 
-            if reading_text:
-                base = os.path.splitext(os.path.basename(filename))[0]
-                outname = f"{base}_extracted_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
-                outpath = os.path.join(EXTRACT_FOLDER, outname)
-                with open(outpath, "w", encoding="utf-8", errors="ignore") as out:
-                    out.write(reading_text)
-                download_url = url_for("extracted_file", filename=outname)
-        except Exception as e:
-            flash(f"เกิดข้อผิดพลาดในการอ่านไฟล์: {e}", "error")
+        if ext != ".pdf":
+            flash("⚠️ รองรับเฉพาะไฟล์ .pdf เท่านั้น", "warning")
             return redirect(request.url)
 
-    return render_template("index.html", reading_text=reading_text, download_url=download_url, pdf_url=pdf_url)
+        path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+        f.save(path)
+        pdf_url = url_for("uploaded_file", filename=filename)
+
+    return render_template("index.html", pdf_url=pdf_url)
 
 # ---------- AUTH ----------
 @app.route("/signup", methods=["POST"])
@@ -233,7 +187,6 @@ def login_submit():
         session["username"] = user["username"]
         session["role"] = user["role"]
 
-        app.logger.info("LOGIN OK user_id=%s", session.get("user_id"))
         flash("เข้าสู่ระบบสำเร็จ", "success")
         return redirect(url_for("index"))
     except mysql.connector.Error as e:
@@ -259,10 +212,8 @@ def whoami():
 
 @app.route("/forgot", methods=["GET"])
 def forgot_page():
-    # ใช้ forgot1.html ที่คุณมีอยู่แล้ว
     return render_template("forgot1.html")
 
-# aliases ให้พิมพ์ /forgot1.html หรือ /forgot.html ก็มาได้
 @app.route("/forgot1.html")
 def _forgot1_alias():
     return redirect(url_for("forgot_page"))
@@ -271,7 +222,6 @@ def _forgot1_alias():
 def _forgot_alias():
     return redirect(url_for("forgot_page"))
 
-# เอ็นด์พอยต์เช็คการเชื่อมต่อฐานข้อมูลอย่างรวดเร็ว
 @app.route("/dbping")
 def dbping():
     try:
@@ -283,11 +233,11 @@ def dbping():
         return jsonify(ok=True, server_ip=SERVER_IP)
     except Exception as e:
         return jsonify(ok=False, error=str(e)), 500
-# ---------- DB: bootstrap tables (run once) ----------
+
+# ---------- DB INIT ----------
 def init_db():
     try:
         conn = get_conn(); cur = conn.cursor()
-        # ตารางวิชา
         cur.execute("""
             CREATE TABLE IF NOT EXISTS subjects (
                 subjectID   INT AUTO_INCREMENT PRIMARY KEY,
@@ -296,13 +246,12 @@ def init_db():
                 created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
         """)
-        # ตารางบันทึกเวลา
         cur.execute("""
             CREATE TABLE IF NOT EXISTS focus_logs (
                 logID      INT AUTO_INCREMENT PRIMARY KEY,
                 userID     INT NOT NULL,
                 subjectID  INT NOT NULL,
-                timer      INT NOT NULL,         -- นาที
+                timer      INT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (subjectID) REFERENCES subjects(subjectID)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -314,7 +263,7 @@ def init_db():
 
 init_db()
 
-# ---------- APIs: ใช้ตารางเดิมของคุณ (subject, plan) ----------
+# ---------- API ----------
 from flask import abort
 
 def _require_login():
@@ -322,11 +271,8 @@ def _require_login():
         abort(401, description="not logged in")
     return session["user_id"]
 
-# 1) ดึงวิชาทั้งหมดจากตาราง subject (ไม่ผูก user)
 @app.route("/api/subjects", methods=["GET"])
 def api_subjects_list():
-    # ถ้าอยากให้เห็นได้แม้ไม่ล็อกอิน ให้ลบบรรทัด _require_login() ออก
-    # _require_login()
     conn = get_conn(); cur = conn.cursor(dictionary=True)
     try:
         cur.execute("SELECT subjectID, subjectname FROM subject ORDER BY subjectname")
@@ -334,10 +280,10 @@ def api_subjects_list():
         return jsonify(rows), 200
     finally:
         cur.close(); conn.close()
-# 2) เพิ่มวิชาใหม่เข้า subject
+
 @app.route("/api/subjects", methods=["POST"])
 def api_subjects_add():
-    _require_login()  # เอาออกได้ถ้าอยากให้ใครๆ เพิ่มได้
+    _require_login()
     data = request.get_json(silent=True) or {}
     name = (data.get("name") or "").strip()
     if not name:
@@ -351,8 +297,7 @@ def api_subjects_add():
         return jsonify({"subjectID": new_id, "subjectname": name}), 201
     finally:
         cur.close(); conn.close()
-        
-# 3) บันทึกเวลาเรียนลงตาราง plan (ผูกกับผู้ใช้ที่ล็อกอิน)
+
 @app.route("/api/log", methods=["POST"])
 def api_log_add():
     user_id = _require_login()
@@ -364,12 +309,10 @@ def api_log_add():
 
     conn = get_conn(); cur = conn.cursor()
     try:
-        # เช็คว่า subjectID มีจริงในตาราง subject
         cur.execute("SELECT 1 FROM subject WHERE subjectID=%s", (subjectID,))
         if not cur.fetchone():
             return jsonify(error="subject ไม่ถูกต้อง"), 400
 
-        # ✅ เปลี่ยนจาก plan → dashboard
         cur.execute("""
             INSERT INTO dashboard (userID, subjectID, timer, Date)
             VALUES (%s, %s, %s, NOW())
@@ -379,13 +322,11 @@ def api_log_add():
     finally:
         cur.close(); conn.close()
 
-# 4) ดึงประวัติการบันทึกของผู้ใช้ (join ชื่อวิชา)
 @app.route("/api/logs", methods=["GET"])
 def api_logs_list():
     user_id = _require_login()
     conn = get_conn(); cur = conn.cursor(dictionary=True)
     try:
-        # ✅ เปลี่ยนจาก plan p → dashboard p
         cur.execute("""
             SELECT DATE(p.Date) AS Date, p.timer, s.subjectname
             FROM dashboard p
@@ -396,7 +337,7 @@ def api_logs_list():
         return jsonify(cur.fetchall())
     finally:
         cur.close(); conn.close()
+
 # ---------- RUN ----------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
-
