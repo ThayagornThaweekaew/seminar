@@ -28,6 +28,7 @@ let calibCenter = { lx:0, ly:0, rx:0, ry:0 }; // iris baseline
 // ===== MediaPipe FaceMesh =====
 let faceMesh = null;
 let videoEl, canvasEl, ctx;
+let cameraReady = false; // เปิดกล้องครั้งเดียว
 
 // Eye landmarks (MediaPipe):
 // Left iris center: 468, Right iris center: 473
@@ -46,12 +47,32 @@ const GAZE_TOLERANCE = 0.06; // ระยะเบี่ยงจาก center �
 const GRACE_SECONDS_DEFAULT = 3;
 
 // ===== Timer controls =====
+async function ensureCamera(){
+  if (cameraReady) return true;
+  try{
+    await initCameraAndFaceMesh();
+    cameraReady = true;
+    toast('กล้องพร้อมใช้งาน');
+    return true;
+  }catch(e){
+    console.error('init camera failed', e);
+    toast('ไม่สามารถเปิดกล้องได้');
+    return false;
+  }
+}
+
 function tick(){
   if(!running) return;
   seconds++; $('#display').textContent = fmt(seconds);
   timer = setTimeout(tick, 1000);
 }
-$('#startBtn').onclick = ()=>{ if(!running){ running=true; tick(); $('#mood').textContent='กำลังโฟกัส…'; }};
+$('#startBtn').onclick = async ()=>{
+  if(!running){
+    const ok = await ensureCamera();
+    if(!ok) return;
+    running=true; tick(); $('#mood').textContent='กำลังโฟกัส…';
+  }
+};
 $('#pauseBtn').onclick = ()=>{ running=false; clearTimeout(timer); $('#mood').textContent='พักก่อน'; };
 $('#stopBtn').onclick = ()=>{
   if(!running && seconds===0) return;
@@ -322,12 +343,9 @@ function boot(){
   $('#backBtn').onclick = ()=> history.back();
 
   // Overlay / options listeners
-  $('#drawOverlay').addEventListener('change', ()=> {
-    // just affects drawing in onResults
-  });
+  $('#drawOverlay').addEventListener('change', ()=> { /* no-op */ });
 
-  initCameraAndFaceMesh()
-  .then(()=> toast('กล้องพร้อมใช้งาน'))
-  .catch(()=> { $('#mood').textContent = '❌ ไม่สามารถเข้าถึงกล้อง'; });
+  // ไม่เปิดกล้องอัตโนมัติ รอให้กด Start ก่อน
+  toast('กด Start เพื่อเริ่มและขอสิทธิ์กล้อง');
 }
 boot();
