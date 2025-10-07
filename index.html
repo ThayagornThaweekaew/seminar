@@ -85,13 +85,6 @@
 
           {% if download_url or pdf_url %}
           <div class="opt" style="display:flex; gap:8px; align-items:center; justify-content:flex-end; margin-top:8px;">
-            <label for="fontSizeSel">ขนาดตัวอักษร:</label>
-            <select id="fontSizeSel">
-              <option value="18px">เล็ก</option>
-              <option value="20px" selected>กลาง</option>
-              <option value="24px">ใหญ่</option>
-              <option value="28px">ใหญ่มาก</option>
-            </select>
             {% if download_url %}
               <a class="btn tiny" href="{{ download_url }}">⬇️ ดาวน์โหลดข้อความ</a>
             {% endif %}

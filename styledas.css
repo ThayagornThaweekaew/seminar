@@ -1443,3 +1443,42 @@ body.has-sidebar,
   box-shadow: 0 0 16px rgba(0, 0, 0, 0.08); /* เงานุ่มๆ */
   border-radius: 12px;   /* มุมโค้งสวย */
 }
+
+/* ===== ปรับสไตล์ input[type="file"] ให้เข้ากับธีม ===== */
+input[type="file"] {
+  color: var(--text);                      /* สีข้อความตามธีม */
+  background: var(--surface);              /* พื้นหลังตามธีม */
+  border: 1.5px solid var(--soft);         /* ขอบนุ่ม */
+  border-radius: 10px;
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+input[type="file"]:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 25%, transparent);
+}
+
+/* แก้สีข้อความในธีมมืดให้เห็นชัด */
+[data-theme="dark"] input[type="file"] {
+  color: #e5e7eb;          /* ขาวเทาอ่านง่าย */
+  background: #1f2937;     /* พื้นหลังเข้ม */
+  border-color: #374151;   /* ขอบกลืนกับโทน */
+}
+
+/* ปุ่ม Choose File ในบางเบราว์เซอร์ */
+input[type="file"]::file-selector-button {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: filter 0.2s ease;
+}
+
+input[type="file"]::file-selector-button:hover {
+  filter: brightness(1.1);
+}
