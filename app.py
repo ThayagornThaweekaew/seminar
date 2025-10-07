@@ -15,9 +15,9 @@ JS_DIR   = BASE_DIR  # ใช้เสิร์ฟ JS จากโฟลเด�
 # ---------- สร้างแอป ----------
 app = Flask(
     __name__,
-    template_folder=BASE_DIR,     
-    static_folder=BASE_DIR,       
-    static_url_path="/static"     
+    template_folder=BASE_DIR,     # ใช้ไฟล์ .html ในโฟลเดอร์เดียวกับ app.py
+    static_folder=BASE_DIR,       # ใช้ไฟล์ static (css/js/img) ในโฟลเดอร์เดียวกัน
+    static_url_path="/static"     # เส้นทางเสิร์ฟ static
 )
 app.secret_key = "change_me_to_random_secret"
 
@@ -36,17 +36,36 @@ def _no_cache_html(resp):
         pass
     return resp
 
-# ---------- DB CONFIG ----------
-DB_CONFIG = {
-    "host": "127.0.0.1",
+# ---------- DB CONFIG: รองรับทั้ง local และ remote (SERVER_IP = 192.168.1.4) ----------
+SERVER_IP = "192.168.1.4"  # <-- ใส่ IP เครื่องที่รัน MySQL ของคุณ
+
+# ค่าพื้นฐานร่วม (แนะนำให้เปลี่ยนเป็น appuser+รหัสแข็งแรงในโปรดักชัน)
+BASE_DB = {
     "port": 3306,
     "user": "root",
-    "password": "จๅจภจถจุ",  # แก้ให้ตรงของคุณ
+    "password": "จๅจภจถจุ",           # แก้ให้ตรงของคุณ
     "database": "seminar",
     "auth_plugin": "mysql_native_password",
+    "connection_timeout": 5,
 }
+
 def get_conn():
-    return mysql.connector.connect(**DB_CONFIG)
+    """
+    ลำดับการเชื่อมต่อ:
+    1) 127.0.0.1  (กรณี Flask และ MySQL อยู่เครื่องเดียวกัน)
+    2) SERVER_IP  (กรณีรันจากเครื่องอื่นใน LAN)
+    """
+    last_err = None
+    try:
+        return mysql.connector.connect(host="127.0.0.1", **BASE_DB)
+    except mysql.connector.Error as e1:
+        last_err = e1
+        try:
+            return mysql.connector.connect(host=SERVER_IP, **BASE_DB)
+        except mysql.connector.Error as e2:
+            last_err = e2
+    # ถ้าไม่สำเร็จทั้งสองแบบ โยน error ออกไปเพื่อให้เห็นสาเหตุจริงในหน้า /dbping หรือ log
+    raise last_err
 
 # ---------- เสิร์ฟไฟล์ JS ----------
 @app.route("/js/<path:filename>")
@@ -229,7 +248,7 @@ def logout():
     session.clear()
     return redirect(url_for("login_page"))
 
-# ---------- DEBUG: ตรวจ session ----------
+# ---------- DEBUG/TOOLS ----------
 @app.route("/whoami")
 def whoami():
     return {
@@ -237,6 +256,7 @@ def whoami():
         "username": session.get("username"),
         "role": session.get("role")
     }
+
 @app.route("/forgot", methods=["GET"])
 def forgot_page():
     # ใช้ forgot1.html ที่คุณมีอยู่แล้ว
@@ -251,6 +271,20 @@ def _forgot1_alias():
 def _forgot_alias():
     return redirect(url_for("forgot_page"))
 
+# เอ็นด์พอยต์เช็คการเชื่อมต่อฐานข้อมูลอย่างรวดเร็ว
+@app.route("/dbping")
+def dbping():
+    try:
+        conn = get_conn()
+        cur = conn.cursor()
+        cur.execute("SELECT 1")
+        cur.fetchone()
+        cur.close(); conn.close()
+        return jsonify(ok=True, server_ip=SERVER_IP)
+    except Exception as e:
+        return jsonify(ok=False, error=str(e)), 500
+
 # ---------- RUN ----------
 if __name__ == "__main__":
+    # หมายเหตุ: ถ้าจะให้เครื่องอื่นเข้าเว็บ Flask ได้ ให้ run แบบ host=0.0.0.0
     app.run(host="0.0.0.0", port=5000, debug=True)
