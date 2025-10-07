@@ -31,6 +31,11 @@ let pomo = { focus: 25, short: 5, long: 15, longGap: 4, auto: true };
 let chartInstance = null;
 
 /* ---------- Timer State ---------- */
+// ==== Manual control flags ====
+let allowAutoStart = false;     // ห้ามเริ่มเองจากกล้อง (ต้องกด Start) — ค่าเริ่มต้น false
+let pausedByDetection = false;  // true ถ้าหยุดเพราะไม่เจอหน้า
+let pausedByBlur = false;       // true ถ้าหยุดเพราะสลับแท็บ/แอป
+
 let timer = null;
 let remainingSeconds = 0;
 let isRunning = false;
@@ -202,6 +207,9 @@ function handlePomodoroCycle(){
 /* ---------- Timer Control ---------- */
 async function startTimer(){
   if(isRunning) return;
+  pausedByDetection = false;
+  pausedByBlur = false;
+  allowAutoStart = false;  // เริ่มวิ่งจากการกดปุ่มเท่านั้น
 
   await ensureEyeTrackingMP?.();
 
@@ -309,6 +317,9 @@ async function stopTimer(){
       alert(e.message || "บันทึกไม่สำเร็จ");
     }
   }
+  allowAutoStart = false;        // กด Stop แล้วห้ามเริ่มเอง
+  pausedByDetection = false;
+  pausedByBlur = false;
 
   initialSeconds = 0;
 }
@@ -503,10 +514,10 @@ function isLooking(landmarks) {
   return (L > 0.01 && R > 0.01);
 }
 
-// ===== Debounce eye tracking =====
+// ===== Debounced eye tracking with manual resume =====
 let lookingCounter = 0, missingCounter = 0;
-const LOOK_ON_FRAMES  = 8;   // พบตาติดกัน 8 เฟรมถึงเริ่ม
-const LOOK_OFF_FRAMES = 12;  // หายไป 12 เฟรมถึงหยุด
+const LOOK_ON_FRAMES  = 8;   // ต้องเจอต่อเนื่องกี่เฟรมถึงนับว่า "เจอ"
+const LOOK_OFF_FRAMES = 12;  // ต้องหายกี่เฟรมถึงนับว่า "ไม่เจอ"
 
 function handleLookOn(){ lookingCounter++; missingCounter = 0; }
 function handleLookOff(){ missingCounter++; lookingCounter = 0; }
@@ -527,23 +538,29 @@ faceMesh?.onResults((results) => {
 
     if (isLooking(lm)) {
       handleLookOn();
-      if (eyeStatus){ eyeStatus.textContent = "✅ กำลังมองจอ"; eyeStatus.style.color="green"; }
-      if (!isRunning && lookingCounter >= LOOK_ON_FRAMES) startTimer();
+      if (eyeStatus){ eyeStatus.textContent = "✅ กำลังมองจอ"; eyeStatus.style.color="limegreen"; }
+      // ✳️ ไม่ auto-start เด็ดขาด — ต้องกดปุ่ม Start เท่านั้น
     } else {
       handleLookOff();
-      if (eyeStatus){ eyeStatus.textContent = "⏸️ ไม่เจอสายตา"; eyeStatus.style.color="red"; }
-      if (isRunning && missingCounter >= LOOK_OFF_FRAMES) pauseTimer();
+      if (eyeStatus){ eyeStatus.textContent = "⏸️ ไม่เจอสายตา"; eyeStatus.style.color="#f59e0b"; }
+      if (isRunning && missingCounter >= LOOK_OFF_FRAMES) {
+        pauseTimer();
+        pausedByDetection = true;     // หยุดเพราะกล้องไม่เจอ
+        allowAutoStart = false;       // ต้องกด Start เองเสมอ
+      }
     }
   } else {
     handleLookOff();
     if (eyeStatus){ eyeStatus.textContent = "❌ ไม่เจอหน้า"; eyeStatus.style.color="gray"; }
-    if (isRunning && missingCounter >= LOOK_OFF_FRAMES) pauseTimer();
+    if (isRunning && missingCounter >= LOOK_OFF_FRAMES) {
+      pauseTimer();
+      pausedByDetection = true;
+      allowAutoStart = false;
+    }
   }
 
   faceCtx.restore();
 });
-
-
 
 async function openCameraMP() {
   if (!cam) return false;
@@ -604,3 +621,24 @@ async function ensureEyeTrackingMP(){
 });
 
 }
+// ===== Auto-pause when tab/app is not active =====
+function pauseForBlur(reason){
+  if (isRunning) {
+    pauseTimer();
+    pausedByBlur = (reason === "blur" || reason === "hidden");
+    allowAutoStart = false;         // ต้องกด Start เองเมื่อกลับมา
+    // ข้อความสถานะ (ไม่บังคับ)
+    if (moodEl && reason === "hidden") moodEl.textContent = "หยุดเพราะออกจากหน้า — กด START เพื่อไปต่อ";
+  }
+}
+
+// แค่สลับแอป/ย่อหน้าต่าง (หน้าต่างเบราว์เซอร์ blur)
+window.addEventListener("blur", () => pauseForBlur("blur"));
+
+// เปลี่ยนความเห็นได้ (แท็บซ่อน/โผล่)
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) pauseForBlur("hidden");
+});
+
+// ออกจากหน้า (เช่น ไปหน้าล็อกอิน/ปิดแท็บ)
+window.addEventListener("pagehide", () => pauseForBlur("pagehide"));
