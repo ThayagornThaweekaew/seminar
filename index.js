@@ -26,7 +26,7 @@ const moodEl          = document.getElementById("mood");
 
 /* Mode switch UI */
 let mode = "timer"; // 'timer' | 'pomo'
-let pomo = { focus: 25, short: 5, long: 15, longGap: 4, auto: true }
+let pomo = { focus: 25, short: 5, long: 15, longGap: 4, auto: true };
 /* Chart */
 let chartInstance = null;
 
@@ -40,6 +40,7 @@ let sessions = 0;
 let totalFocusMinutes = 0;
 let todayFocusMinutes = 0;
 let initialSeconds = 0;              // วินาทีตั้งต้นของรอบนี้
+let _latestTotalsMap = new Map();    // เก็บ totals ล่าสุดไว้ให้กราฟ
 
 /* ---------- Bird ---------- */
 const BIRD_EMOJI = {
@@ -69,6 +70,7 @@ function updateProgress(){
 async function loadSubjectsFromDB() {
   try {
     const rs = await fetch("/api/subjects");
+    if (!rs.ok) throw new Error("โหลดรายวิชาไม่สำเร็จ");
     const data = await rs.json(); // [{subjectID, subjectname}]
     subjectSelect.innerHTML = "";
     subjectsMap.clear();
@@ -91,6 +93,7 @@ async function loadSubjectsFromDB() {
     subjectsCountEl && (subjectsCountEl.textContent = String(subjectSelect.options.length));
   } catch (e) {
     console.error("loadSubjectsFromDB:", e);
+    alert("โหลดรายการวิชาไม่สำเร็จ");
   }
 }
 
@@ -118,7 +121,7 @@ addSubjectBtn?.addEventListener("click", async () => {
     newSubjectInput.value = "";
     subjectsCountEl && (subjectsCountEl.textContent = String(subjectSelect.options.length));
   } catch (e) {
-    alert(e.message);
+    alert(e.message || "เพิ่มวิชาไม่สำเร็จ");
   } finally {
     addSubjectBtn.disabled = false;
   }
@@ -177,8 +180,9 @@ function handlePomodoroCycle(){
 /* ---------- Timer Control ---------- */
 async function startTimer(){
   if(isRunning) return;
-  // เปิดกล้อง (ขอสิทธิ์) ตอนกด Start
-  await ensureEyeTrackingMP();
+
+  // เปิดกล้อง (ขอสิทธิ์) ตอนกด Start (ถ้าไม่มี eye-tracking ส่วนนี้จะไม่กระทบ)
+  await ensureEyeTrackingMP?.();
 
   const val = subjectSelect.value || subjectSelect.options[0]?.value || "";
   if(!val){ alert("กรุณาเพิ่ม/เลือกวิชา"); return; }
@@ -224,22 +228,18 @@ function pauseTimer(){
 }
 
 async function stopTimer(){
-  // หยุดนาฬิกา
   clearInterval(timer);
   const wasRunning = isRunning;
   isRunning = false;
 
-  // เวลาที่ทำไปแล้ว (วินาที -> นาที)
   const workedSeconds = Math.max(0, initialSeconds - remainingSeconds);
   const workedMinutes = Math.max(0, Math.round(workedSeconds / 60));
 
-  // รีเซ็ต UI
   remainingSeconds = 0;
   updateDisplay(0); updateProgress();
   setBird("bored","พร้อมเริ่มเมื่อไหร่ก็กด START");
   document.body.classList.remove("running","paused");
 
-  // ถ้าเคยเริ่มและทำไป > 0 นาที => บันทึกลง DB (ขั้นต่ำ 1 นาที)
   if (wasRunning || workedMinutes > 0) {
     const subjectID = Number(subjectSelect.value || selectedSubject || 0);
     if (!subjectID) { initialSeconds = 0; return alert("กรุณาเลือกวิชา"); }
@@ -261,9 +261,9 @@ async function stopTimer(){
       todayTimeEl && (todayTimeEl.textContent = todayFocusMinutes+"m");
       sessionsEl && (sessionsEl.textContent = sessions);
       await refreshLogsFromDB();
-      renderChartFromTotals(_latestTotalsMap); // ใช้ map ล่าสุด
+      renderChartFromTotals(_latestTotalsMap);
     } catch (e) {
-      alert(e.message);
+      alert(e.message || "บันทึกไม่สำเร็จ");
     }
   }
 
@@ -277,10 +277,8 @@ function formatHM(mins){
   if (h > 0) return `${h} ชม ${r} นาที`;
   return `${r} นาที`;
 }
-// let _latestTotalsMap = new Map(); // เก็บ totals ล่าสุดไว้ให้กราฟ
 
 async function logSession(){
-  // ใช้เวลาที่ตั้งไว้ (initialSeconds) เป็น "แผน" ถ้าไม่เจอ ก็ fallback timeSelect/pomo
   const plannedMinutes = initialSeconds > 0 ? Math.round(initialSeconds/60) : 0;
   const sessionMinutes = (mode==="timer") ? (parseInt(timeSelect.value,10)||plannedMinutes) : (pomo.focus || plannedMinutes);
   const subjectID = Number(subjectSelect.value || selectedSubject || 0);
@@ -306,7 +304,7 @@ async function logSession(){
     renderChartFromTotals(_latestTotalsMap);
     updateProgress();
   } catch (e) {
-    alert(e.message);
+    alert(e.message || "บันทึกไม่สำเร็จ");
   }
 }
 
@@ -320,11 +318,9 @@ async function refreshLogsFromDB(){
       if (g) g.textContent = "0 นาที";
       _latestTotalsMap = new Map();
       return;
-}
-
+    }
     const rows = await rs.json();
 
-    // รวมเวลาต่อวิชา
     const map = new Map();
     let grand = 0;
     for (const r of rows) {
@@ -333,9 +329,8 @@ async function refreshLogsFromDB(){
       map.set(name, (map.get(name) || 0) + mins);
       grand += mins;
     }
-    _latestTotalsMap = map; // เก็บไว้ใช้วาดกราฟ
+    _latestTotalsMap = map;
 
-    // สร้างตาราง
     const tbody = document.querySelector("#subjectTotals tbody");
     if (tbody) {
       tbody.innerHTML = "";
@@ -355,11 +350,9 @@ async function refreshLogsFromDB(){
       }
     }
 
-    // total รวมทั้งหมด
     const grandEl = document.getElementById("grandTotal");
     if (grandEl) grandEl.textContent = formatHM(grand);
 
-    // อัปเดตกราฟ
     renderChartFromTotals(map);
   }catch(e){
     console.error("refreshLogsFromDB:", e);
@@ -391,13 +384,19 @@ function renderChartFromTotals(map){
   });
 }
 
-/* ---------- Idle Detector ---------- */
-idleStart=Date.now();
-setInterval(()=>{ const idleSec=Math.floor((Date.now()-idleStart)/1000);
-  if(!isRunning && idleSec>=IDLE_LIMIT) setBird("sleepy","🥱 ง่วงแล้วน้า… กลับมาโฟกัสกันเถอะ");
-},5000);
+/* ---------- Idle Detector (fixed) ---------- */
+let idleStart = Date.now();
+const IDLE_LIMIT = 120; // วินาทีที่ถือว่า idle
+
+setInterval(() => {
+  const idleSec = Math.floor((Date.now() - idleStart) / 1000);
+  if (!isRunning && idleSec >= IDLE_LIMIT) {
+    setBird("sleepy","🥱 ง่วงแล้วน้า… กลับมาโฟกัสกันเถอะ");
+  }
+}, 5000);
+
 ["mousemove","keydown","pointerdown","touchstart","visibilitychange"].forEach(ev=>{
-  window.addEventListener(ev,()=>{ idleStart=Date.now(); });
+  window.addEventListener(ev, () => { idleStart = Date.now(); });
 });
 
 /* ---------- Events ---------- */
@@ -421,12 +420,12 @@ async function init(){
 init();
 
 /* ===============================
-   Eye Tracking with MediaPipe FaceMesh
+   Eye Tracking with MediaPipe FaceMesh (optional)
    =============================== */
 const cam = document.getElementById("cameraFeed");
 const eyeStatus = document.getElementById("eyeStatus");
 
-// เตรียม canvas ซ้อนบนวิดีโอ
+// เตรียม canvas ซ้อนบนวิดีโอ (ถ้ามี DOM)
 let faceCanvas = document.getElementById("faceCanvas");
 if (!faceCanvas) {
   faceCanvas = document.createElement("canvas");
@@ -442,18 +441,17 @@ if (!faceCanvas) {
 }
 const faceCtx = faceCanvas.getContext("2d");
 
-// สร้าง FaceMesh
-const faceMesh = new FaceMesh({
+// ใช้ได้เมื่อมี FaceMesh/MediaPipe โหลดในหน้าแล้ว
+const faceMesh = window.FaceMesh ? new FaceMesh({
   locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
-});
-faceMesh.setOptions({
+}) : null;
+faceMesh?.setOptions({
   maxNumFaces: 1,
   refineLandmarks: true,
   minDetectionConfidence: 0.5,
   minTrackingConfidence: 0.5,
 });
 
-// heuristic ง่ายๆ ว่ามองจอไหม
 function isLooking(landmarks) {
   if (!landmarks || landmarks.length < 468) return false;
   const L = Math.abs(landmarks[33].x - landmarks[133].x);
@@ -461,20 +459,19 @@ function isLooking(landmarks) {
   return (L > 0.01 && R > 0.01);
 }
 
-// วาด + trigger pause/resume
-faceMesh.onResults((results) => {
+faceMesh?.onResults((results) => {
   const w = cam?.videoWidth || faceCanvas.width;
   const h = cam?.videoHeight || faceCanvas.height;
   if (faceCanvas.width !== w || faceCanvas.height !== h) { faceCanvas.width=w; faceCanvas.height=h; }
 
   faceCtx.save();
   faceCtx.clearRect(0,0,faceCanvas.width,faceCanvas.height);
-  faceCtx.drawImage(results.image, 0, 0, faceCanvas.width, faceCanvas.height);
+  results?.image && faceCtx.drawImage(results.image, 0, 0, faceCanvas.width, faceCanvas.height);
 
-  if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+  if (results?.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
     const lm = results.multiFaceLandmarks[0];
-    drawConnectors(faceCtx, lm, FACEMESH_LEFT_EYE,  { lineWidth: 1 });
-    drawConnectors(faceCtx, lm, FACEMESH_RIGHT_EYE, { lineWidth: 1 });
+    window.drawConnectors && drawConnectors(faceCtx, lm, window.FACEMESH_LEFT_EYE,  { lineWidth: 1 });
+    window.drawConnectors && drawConnectors(faceCtx, lm, window.FACEMESH_RIGHT_EYE, { lineWidth: 1 });
 
     if (isLooking(lm)) {
       if (eyeStatus){ eyeStatus.textContent = "✅ กำลังมองจอ"; eyeStatus.style.color="green"; }
@@ -490,7 +487,6 @@ faceMesh.onResults((results) => {
   faceCtx.restore();
 });
 
-// เปิดกล้อง + ส่งเฟรมเข้าโมเดล
 async function openCameraMP() {
   if (!cam) return false;
   try {
@@ -512,9 +508,9 @@ async function openCameraMP() {
 
 let mpCameraReady = false;
 async function ensureEyeTrackingMP(){
-  if (mpCameraReady) return true;
+  if (mpCameraReady || !faceMesh) return true; // ถ้าไม่มี lib ก็ข้าม
   try{
-    await openCameraMP(); // ต้องเป็นฟังก์ชันที่เรียก getUserMedia และเริ่มส่งเฟรมเข้า faceMesh
+    await openCameraMP();
     mpCameraReady = true;
     return true;
   }catch(e){
@@ -523,247 +519,3 @@ async function ensureEyeTrackingMP(){
     return false;
   }
 }
-
-// ---------- Timer Control ----------
-async function startTimer(){
-  if(isRunning) return;
-  // เปิดกล้อง (ขอสิทธิ์) ตอนกด Start
-  await ensureEyeTrackingMP();
-
-  const val = subjectSelect.value || subjectSelect.options[0]?.value || "";
-  if(!val){ alert("กรุณาเพิ่ม/เลือกวิชา"); return; }
-  selectedSubject = val;
-
-  if(remainingSeconds<=0){
-    const minutes = (mode==="timer") ? parseInt(timeSelect.value,10) : pomo.focus;
-    if(!minutes || isNaN(minutes)){ alert("เลือกเวลาหรือพรีเซตก่อนนะ"); return; }
-    remainingSeconds = minutes*60;
-    initialSeconds   = remainingSeconds; // เก็บค่าตั้งต้นของรอบ
-  }
-
-  const subjectName = subjectsMap.get(String(selectedSubject)) || "ไม่ระบุ";
-  isRunning = true;
-  setBird("focused", `กำลังโฟกัสที่ ${subjectName}…`);
-
-  document.body.classList.remove("paused");
-  document.body.classList.add("running");
-
-  timer = setInterval(()=>{
-    remainingSeconds = Math.max(0, remainingSeconds-1);
-    updateDisplay(); updateProgress();
-    if(remainingSeconds<=0){
-      clearInterval(timer);
-      isRunning=false;
-      logSession(); // หมดเวลา -> บันทึกตามแผน
-
-      document.body.classList.remove("running","paused");
-      if(mode==="pomo") handlePomodoroCycle();
-      else { setBird("celebrate","🎉 หมดเวลาพอดี เก่งมาก!"); alert("⏰ หมดเวลาแล้ว!"); }
-      initialSeconds = 0;
-    }
-  },1000);
-}
-
-function pauseTimer(){
-  if(!isRunning) return;
-  clearInterval(timer);
-  isRunning=false;
-  setBird("bored","⏸️ หยุดพักชั่วคราว");
-  document.body.classList.remove("running");
-  document.body.classList.add("paused");
-}
-
-async function stopTimer(){
-  // หยุดนาฬิกา
-  clearInterval(timer);
-  const wasRunning = isRunning;
-  isRunning = false;
-
-  // เวลาที่ทำไปแล้ว (วินาที -> นาที)
-  const workedSeconds = Math.max(0, initialSeconds - remainingSeconds);
-  const workedMinutes = Math.max(0, Math.round(workedSeconds / 60));
-
-  // รีเซ็ต UI
-  remainingSeconds = 0;
-  updateDisplay(0); updateProgress();
-  setBird("bored","พร้อมเริ่มเมื่อไหร่ก็กด START");
-  document.body.classList.remove("running","paused");
-
-  // ถ้าเคยเริ่มและทำไป > 0 นาที => บันทึกลง DB (ขั้นต่ำ 1 นาที)
-  if (wasRunning || workedMinutes > 0) {
-    const subjectID = Number(subjectSelect.value || selectedSubject || 0);
-    if (!subjectID) { initialSeconds = 0; return alert("กรุณาเลือกวิชา"); }
-
-    try {
-      const minutes = Math.max(1, workedMinutes);
-      const rs = await fetch("/api/log", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ subjectID, timer: minutes })
-      });
-      const data = await rs.json();
-      if (!rs.ok) throw new Error(data?.error || "บันทึกไม่สำเร็จ");
-
-      totalFocusMinutes += minutes;
-      todayFocusMinutes += minutes;
-      sessions++;
-      totalTimeEl && (totalTimeEl.textContent = Math.floor(totalFocusMinutes/60)+"h");
-      todayTimeEl && (todayTimeEl.textContent = todayFocusMinutes+"m");
-      sessionsEl && (sessionsEl.textContent = sessions);
-      await refreshLogsFromDB();
-      renderChartFromTotals(_latestTotalsMap); // ใช้ map ล่าสุด
-    } catch (e) {
-      alert(e.message);
-    }
-  }
-
-  initialSeconds = 0;
-}
-
-/* ---------- Progress / Log (DB) ---------- */
-function formatHM(mins){
-  const m = Math.max(0, parseInt(mins,10) || 0);
-  const h = Math.floor(m/60), r = m % 60;
-  if (h > 0) return `${h} ชม ${r} นาที`;
-  return `${r} นาที`;
-}
-let _latestTotalsMap = new Map(); // เก็บ totals ล่าสุดไว้ให้กราฟ
-
-async function logSession(){
-  // ใช้เวลาที่ตั้งไว้ (initialSeconds) เป็น "แผน" ถ้าไม่เจอ ก็ fallback timeSelect/pomo
-  const plannedMinutes = initialSeconds > 0 ? Math.round(initialSeconds/60) : 0;
-  const sessionMinutes = (mode==="timer") ? (parseInt(timeSelect.value,10)||plannedMinutes) : (pomo.focus || plannedMinutes);
-  const subjectID = Number(subjectSelect.value || selectedSubject || 0);
-  if (!subjectID || sessionMinutes <= 0) return;
-
-  try {
-    const rs = await fetch("/api/log", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({ subjectID, timer: sessionMinutes })
-    });
-    const data = await rs.json();
-    if (!rs.ok) throw new Error(data?.error || "บันทึกไม่สำเร็จ");
-
-    totalFocusMinutes += sessionMinutes;
-    todayFocusMinutes += sessionMinutes;
-    sessions++;
-    totalTimeEl && (totalTimeEl.textContent = Math.floor(totalFocusMinutes/60)+"h");
-    todayTimeEl && (todayTimeEl.textContent = todayFocusMinutes+"m");
-    sessionsEl && (sessionsEl.textContent = sessions);
-
-    await refreshLogsFromDB();
-    renderChartFromTotals(_latestTotalsMap);
-    updateProgress();
-  } catch (e) {
-    alert(e.message);
-  }
-}
-
-async function refreshLogsFromDB(){
-  try{
-    const rs = await fetch("/api/logs");  // [{Date,timer,subjectname}]
-    if (!rs.ok) {
-      const tbody = document.querySelector("#subjectTotals tbody");
-      if (tbody) tbody.innerHTML = `<tr><td colspan="2">ยังไม่ได้เข้าสู่ระบบ</td></tr>`;
-      document.getElementById("grandTotal").textContent = "0 นาที";
-      _latestTotalsMap = new Map();
-      return;
-    }
-    const rows = await rs.json();
-
-    // รวมเวลาต่อวิชา
-    const map = new Map();
-    let grand = 0;
-    for (const r of rows) {
-      const name = r.subjectname || "(ไม่ระบุ)";
-      const mins = Number(r.timer || 0);
-      map.set(name, (map.get(name) || 0) + mins);
-      grand += mins;
-    }
-    _latestTotalsMap = map; // เก็บไว้ใช้วาดกราฟ
-
-    // สร้างตาราง
-    const tbody = document.querySelector("#subjectTotals tbody");
-    if (tbody) {
-      tbody.innerHTML = "";
-      if (map.size === 0) {
-        tbody.innerHTML = `<tr><td colspan="2">ยังไม่มีประวัติ</td></tr>`;
-      } else {
-        const items = Array.from(map.entries()).sort((a,b)=>b[1]-a[1]);
-        for (const [name, mins] of items) {
-          const tr = document.createElement("tr");
-          const td1 = document.createElement("td");
-          const td2 = document.createElement("td");
-          td1.textContent = name;
-          td2.textContent = formatHM(mins);
-          tr.appendChild(td1); tr.appendChild(td2);
-          tbody.appendChild(tr);
-        }
-      }
-    }
-
-    // total รวมทั้งหมด
-    const grandEl = document.getElementById("grandTotal");
-    if (grandEl) grandEl.textContent = formatHM(grand);
-
-    // อัปเดตกราฟ
-    renderChartFromTotals(map);
-  }catch(e){
-    console.error("refreshLogsFromDB:", e);
-  }
-}
-
-/* ---------- Chart ---------- */
-function renderChartFromTotals(map){
-  const ctx=document.getElementById("focusChart"); if(!ctx) return;
-  const labels = [];
-  const values = [];
-  const items = Array.from(map.entries()).sort((a,b)=>b[1]-a[1]);
-  for (const [name, mins] of items) {
-    labels.push(name);
-    values.push(mins);
-  }
-  if (chartInstance) chartInstance.destroy();
-  chartInstance = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels,
-      datasets: [{ label: "เวลาสะสม (นาที)", data: values, borderRadius: 8 }]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true, title: { display: true, text: "นาที" } } }
-    }
-  });
-}
-
-/* ---------- Idle Detector ---------- */
-let idleStart=Date.now(); const IDLE_LIMIT=120;
-setInterval(()=>{ const idleSec=Math.floor((Date.now()-idleStart)/1000);
-  if(!isRunning && idleSec>=IDLE_LIMIT) setBird("sleepy","🥱 ง่วงแล้วน้า… กลับมาโฟกัสกันเถอะ");
-},5000);
-["mousemove","keydown","pointerdown","touchstart","visibilitychange"].forEach(ev=>{
-  window.addEventListener(ev,()=>{ idleStart=Date.now(); });
-});
-
-/* ---------- Events ---------- */
-startBtn?.addEventListener("click", startTimer);
-pauseBtn?.addEventListener("click", pauseTimer);
-stopBtn?.addEventListener("click", stopTimer);
-
-// ทำให้เรียกใช้ได้จาก callback อื่นๆ ได้เสมอ
-window.startTimer = startTimer;
-window.pauseTimer = pauseTimer;
-window.stopTimer = stopTimer;
-
-/* ---------- Init ---------- */
-async function init(){
-  await loadSubjectsFromDB();
-  updateDisplay(0);
-  updateProgress();
-  setBird("happy","🦜 พร้อมลุย!");
-  await refreshLogsFromDB(); // แสดง “เวลาสะสมต่อวิชา” จาก DB
-}
-init();
