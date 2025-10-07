@@ -52,6 +52,28 @@ function setBird(state, text){
   birdEl.textContent = BIRD_EMOJI[state] || "🦜";
   if(text) moodEl.textContent = text;
 }
+// ===== Toast & Notification =====
+function showToast(msg) {
+  const el = document.getElementById("timeToast");
+  if (!el) return alert(msg);
+  el.textContent = msg;
+  el.classList.add("show");
+  setTimeout(()=> el.classList.remove("show"), 4000);
+}
+
+async function notifyTimeUp(title = "หมดเวลาแล้ว!", body = "เยี่ยมมาก — พักสายตาสักครู่ แล้วไปต่อ!") {
+  try {
+    if ("Notification" in window) {
+      if (Notification.permission === "default") {
+        await Notification.requestPermission();
+      }
+      if (Notification.permission === "granted") {
+        new Notification(title, { body });
+      }
+    }
+  } catch(_) {}
+  showToast(`⏰ ${title} — ${body}`);
+}
 
 /* ---------- Display / Progress ---------- */
 function updateDisplay(val = remainingSeconds){
@@ -181,7 +203,6 @@ function handlePomodoroCycle(){
 async function startTimer(){
   if(isRunning) return;
 
-  // เปิดกล้อง (ขอสิทธิ์) ตอนกด Start (ถ้าไม่มี eye-tracking ส่วนนี้จะไม่กระทบ)
   await ensureEyeTrackingMP?.();
 
   const val = subjectSelect.value || subjectSelect.options[0]?.value || "";
@@ -192,7 +213,7 @@ async function startTimer(){
     const minutes = (mode==="timer") ? parseInt(timeSelect.value,10) : pomo.focus;
     if(!minutes || isNaN(minutes)){ alert("เลือกเวลาหรือพรีเซตก่อนนะ"); return; }
     remainingSeconds = minutes*60;
-    initialSeconds   = remainingSeconds; // เก็บค่าตั้งต้นของรอบ
+    initialSeconds   = remainingSeconds;
   }
 
   const subjectName = subjectsMap.get(String(selectedSubject)) || "ไม่ระบุ";
@@ -202,26 +223,43 @@ async function startTimer(){
   document.body.classList.remove("paused");
   document.body.classList.add("running");
 
+  // ตั้งเวลาเป้าหมายจากตอนนี้
+  targetTs = Date.now() + remainingSeconds * 1000;
+
+  clearInterval(timer);
   timer = setInterval(()=>{
-    remainingSeconds = Math.max(0, remainingSeconds-1);
+    const left = Math.max(0, Math.ceil((targetTs - Date.now())/1000));
+    remainingSeconds = left;
     updateDisplay(); updateProgress();
-    if(remainingSeconds<=0){
+
+    if(left <= 0){
       clearInterval(timer);
       isRunning=false;
-      logSession(); // หมดเวลา -> บันทึกตามแผน
+      logSession();                       // บันทึก session
 
       document.body.classList.remove("running","paused");
-      if(mode==="pomo") handlePomodoroCycle();
-      else { setBird("celebrate","🎉 หมดเวลาพอดี เก่งมาก!"); alert("⏰ หมดเวลาแล้ว!"); }
+      if(mode==="pomo"){
+        handlePomodoroCycle();
+        notifyTimeUp("ครบช่วงโฟกัส!", `พัก ${remainingSeconds===0 ? pomo.short : pomo.long} นาที`);
+      } else {
+        setBird("celebrate","🎉 หมดเวลาพอดี เก่งมาก!");
+        notifyTimeUp();
+      }
       initialSeconds = 0;
+      targetTs = null;
     }
-  },1000);
+  }, 250); // เช็คถี่ขึ้นเล็กน้อย แต่เบา
 }
 
 function pauseTimer(){
   if(!isRunning) return;
   clearInterval(timer);
   isRunning=false;
+
+  // คงค่า remainingSeconds ตามจริง
+  remainingSeconds = Math.max(0, Math.ceil((targetTs - Date.now())/1000));
+  targetTs = null;
+
   setBird("bored","⏸️ หยุดพักชั่วคราว");
   document.body.classList.remove("running");
   document.body.classList.add("paused");
@@ -230,7 +268,12 @@ function pauseTimer(){
 async function stopTimer(){
   clearInterval(timer);
   const wasRunning = isRunning;
+
+  if (wasRunning && targetTs){
+    remainingSeconds = Math.max(0, Math.ceil((targetTs - Date.now())/1000));
+  }
   isRunning = false;
+  targetTs = null;
 
   const workedSeconds = Math.max(0, initialSeconds - remainingSeconds);
   const workedMinutes = Math.max(0, Math.round(workedSeconds / 60));
@@ -269,6 +312,7 @@ async function stopTimer(){
 
   initialSeconds = 0;
 }
+
 
 /* ---------- Progress / Log (DB) ---------- */
 function formatHM(mins){
@@ -459,6 +503,14 @@ function isLooking(landmarks) {
   return (L > 0.01 && R > 0.01);
 }
 
+// ===== Debounce eye tracking =====
+let lookingCounter = 0, missingCounter = 0;
+const LOOK_ON_FRAMES  = 8;   // พบตาติดกัน 8 เฟรมถึงเริ่ม
+const LOOK_OFF_FRAMES = 12;  // หายไป 12 เฟรมถึงหยุด
+
+function handleLookOn(){ lookingCounter++; missingCounter = 0; }
+function handleLookOff(){ missingCounter++; lookingCounter = 0; }
+
 faceMesh?.onResults((results) => {
   const w = cam?.videoWidth || faceCanvas.width;
   const h = cam?.videoHeight || faceCanvas.height;
@@ -474,18 +526,24 @@ faceMesh?.onResults((results) => {
     window.drawConnectors && drawConnectors(faceCtx, lm, window.FACEMESH_RIGHT_EYE, { lineWidth: 1 });
 
     if (isLooking(lm)) {
+      handleLookOn();
       if (eyeStatus){ eyeStatus.textContent = "✅ กำลังมองจอ"; eyeStatus.style.color="green"; }
-      if (typeof startTimer === "function" && !isRunning) startTimer();
+      if (!isRunning && lookingCounter >= LOOK_ON_FRAMES) startTimer();
     } else {
+      handleLookOff();
       if (eyeStatus){ eyeStatus.textContent = "⏸️ ไม่เจอสายตา"; eyeStatus.style.color="red"; }
-      if (typeof pauseTimer === "function" && isRunning) pauseTimer();
+      if (isRunning && missingCounter >= LOOK_OFF_FRAMES) pauseTimer();
     }
   } else {
+    handleLookOff();
     if (eyeStatus){ eyeStatus.textContent = "❌ ไม่เจอหน้า"; eyeStatus.style.color="gray"; }
+    if (isRunning && missingCounter >= LOOK_OFF_FRAMES) pauseTimer();
   }
 
   faceCtx.restore();
 });
+
+
 
 async function openCameraMP() {
   if (!cam) return false;
