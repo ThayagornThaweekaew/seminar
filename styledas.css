@@ -1385,3 +1385,39 @@ body.has-sidebar,
   box-shadow: 0 0 16px rgba(0, 0, 0, 0.08); /* เงานุ่มๆ */
   border-radius: 12px;   /* มุมโค้งสวย */
 }
+/* ===== Enhanced Reading Mode ===== */
+.reading-container {
+  margin-top: 24px;
+}
+
+.reading-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--accent, #6366f1);
+  margin-bottom: 12px;
+}
+
+.reading-box.enhanced {
+  background: linear-gradient(180deg, #fafafa 0%, #f3f4f6 100%);
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 28px 24px;
+  max-height: 75vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  line-height: 1.8;
+  font-size: 20px;
+  font-family: "Sarabun", "Segoe UI", system-ui, sans-serif;
+  color: #1f2937;
+}
+
+.reading-box.enhanced::-webkit-scrollbar {
+  width: 10px;
+}
+.reading-box.enhanced::-webkit-scrollbar-thumb {
+  background: #c7d2fe;
+  border-radius: 10px;
+}
+.reading-box.enhanced::-webkit-scrollbar-thumb:hover {
+  background: #a5b4fc;
+}

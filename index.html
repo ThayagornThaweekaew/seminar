@@ -104,17 +104,14 @@
             </div>
           {% endif %}
 
-          {% if pdf_url %}
-  <section class="pdf-viewer">
-    <h4>📄 ตัวอย่างไฟล์ PDF</h4>
-    <iframe
-      src="{{ pdf_url }}"
-      class="pdf-frame"
-      title="PDF Preview">
-    </iframe>
-  </section>
-{% endif %}
-
+          {% if reading_text %}
+            <section class="reading-container">
+              <h4 class="reading-title">📖 เนื้อหาจากไฟล์ PDF</h4>
+              <div class="reading-box enhanced">
+                <pre id="readingText" class="reading-pre">{{ reading_text }}</pre>
+              </div>
+            </section>
+          {% endif %}
         </article>
       </div>
 
