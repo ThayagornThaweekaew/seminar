@@ -1528,3 +1528,100 @@ input[type="file"]::file-selector-button {
 input[type="file"]::file-selector-button:hover {
   filter: brightness(1.1);
 }
+/* ===== Re-balance camera layout ===== */
+
+/* ทำให้คอลัมน์ซ้าย (ที่มีกล้อง) กว้างขึ้นนิด และชิดซ้ายชัดเจน */
+.stage{
+  display: grid;
+  grid-template-columns: 1.2fr 1fr; /* เดิมอาจเท่ากัน/เอียงขวาไป */
+  gap: 20px;
+  align-items: start;
+  justify-items: start;            /* เน้นให้ไอเท็มเริ่มที่ซ้าย */
+}
+
+/* กล้องชิดซ้ายของคอลัมน์ + ขนาดกำลังดี */
+.video-wrap{
+  justify-self: start;             /* ชิดซ้ายในกริด */
+  margin-left: 0;                  /* กัน margin auto ดันไปขวา */
+  margin-right: auto;
+  width: clamp(420px, 70%, 560px); /* กำหนดช่วงกว้างที่เหมาะสม */
+  aspect-ratio: 4 / 3;
+  height: auto;
+}
+
+/* วิดีโอและแคนวาสต้องพอดีกรอบเสมอ */
+.video-wrap video{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+#faceCanvas{
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* ป้ายสถานะคงที่ที่มุมซ้ายบน */
+.status-badge{
+  left: 12px;
+  right: auto;
+}
+
+/* มือถือ/จอแคบ: จัดเป็นคอลัมน์เดียวและกว้างเต็ม */
+@media (max-width: 1024px){
+  .stage{ grid-template-columns: 1fr; justify-items: center; }
+  .video-wrap{
+    width: 100%;
+    max-width: 100%;
+    aspect-ratio: 16 / 9;
+    margin-right: 0;
+  }
+}
+/* ===== Focus Mode — Camera Full Width ===== */
+.stage {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.video-wrap {
+  width: 100%;
+  max-width: 720px;       /* กล้องใหญ่ขึ้นกว่าปกติ */
+  aspect-ratio: 4 / 3;
+  background: #000;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* วิดีโอเต็มกรอบ */
+.video-wrap video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ป้ายสถานะจับสายตา */
+.status-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  backdrop-filter: blur(6px);
+}
+
+/* มือถือ: ขยายเต็มหน้าจอ */
+@media (max-width: 1024px) {
+  .video-wrap {
+    max-width: 100%;
+    aspect-ratio: 16 / 9;
+  }
+}

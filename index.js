@@ -565,15 +565,42 @@ async function openCameraMP() {
 }
 
 let mpCameraReady = false;
+let mpCam = null;
+
 async function ensureEyeTrackingMP(){
-  if (mpCameraReady || !faceMesh) return true; // ถ้าไม่มี lib ก็ข้าม
-  try{
-    await openCameraMP();
-    mpCameraReady = true;
-    return true;
-  }catch(e){
-    console.error('openCameraMP failed', e);
+  if (mpCameraReady || !faceMesh) return true; // ไม่มี lib ก็ข้าม
+
+  const ok = await openCameraMP();           // เปิดกล้อง
+  if (!ok) {
     setBird?.("annoyed","ไม่สามารถเปิดกล้องสำหรับโฟกัสได้");
     return false;
   }
+
+  // ✅ ใช้ MediaPipe CameraUtils ส่งเฟรมเข้า faceMesh
+  if (window.Camera) {
+    mpCam = new window.Camera(cam, {
+      onFrame: async () => {
+        try { await faceMesh.send({ image: cam }); } catch (_) {}
+      },
+      width: 640,
+      height: 480
+    });
+    await mpCam.start();
+  } else {
+    // fallback: ส่งด้วย rAF ถ้าไม่มี CameraUtils
+    const pump = async () => {
+      try { await faceMesh.send({ image: cam }); } catch (_) {}
+      requestAnimationFrame(pump);
+    };
+    requestAnimationFrame(pump);
+  }
+
+  mpCameraReady = true;
+  return true;
+  cam && cam.addEventListener("loadedmetadata", () => {
+  cam.style.width = "100%";
+  cam.style.height = "100%";
+  cam.style.objectFit = "cover";
+});
+
 }
