@@ -561,14 +561,44 @@ faceMesh?.onResults((results) => {
 
   faceCtx.restore();
 });
+ 
+// ===== Polyfill & guards for getUserMedia =====
+async function ensureMediaDevices() {
+  // polyfill mediaDevices + getUserMedia สำหรับเบราว์เซอร์/บริบทที่ยังไม่มี
+  if (navigator.mediaDevices === undefined) navigator.mediaDevices = {};
+
+  if (navigator.mediaDevices.getUserMedia === undefined) {
+    const legacy = navigator.getUserMedia
+      || navigator.webkitGetUserMedia
+      || navigator.mozGetUserMedia;
+
+    if (!legacy) {
+      throw new Error("getUserMedia is not supported by this browser.");
+    }
+    navigator.mediaDevices.getUserMedia = (constraints) =>
+      new Promise((resolve, reject) => legacy.call(navigator, constraints, resolve, reject));
+  }
+
+  // ต้องรันบน secure context เท่านั้น (https หรือ localhost/127.0.0.1)
+  const isSecure =
+    location.protocol === "https:" ||
+    location.hostname === "localhost" ||
+    location.hostname === "127.0.0.1";
+  if (!isSecure) {
+    throw new Error("ต้องเปิดผ่าน HTTPS หรือ localhost/127.0.0.1 เพื่อใช้กล้อง");
+  }
+}
 
 async function openCameraMP() {
-  if (!cam) return false;
+  if (!cam) { console.warn("no #cameraFeed element"); return false; }
   try {
+    await ensureMediaDevices();
+
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
       audio: false
     });
+
     cam.srcObject = stream;
     cam.muted = true;
     cam.setAttribute("playsinline", "true");
@@ -576,10 +606,21 @@ async function openCameraMP() {
     return true;
   } catch (e) {
     console.error("openCamera error", e);
+    const msg = (e && e.message) ? e.message : String(e);
     if (eyeStatus) eyeStatus.textContent = "❌ เปิดกล้องไม่สำเร็จ";
+    alert(
+        `ไม่สามารถเปิดกล้องได้:
+        - เหตุผล: ${msg}
+        แนวทางแก้:
+        1) เปิดเว็บผ่าน HTTPS หรือ http://localhost / http://127.0.0.1
+        2) อนุญาตการใช้กล้อง (ไอคอนรูปกล้องที่แถบที่อยู่)
+        3) ปิดโปรแกรมที่กำลังใช้กล้องอยู่ (เช่น Zoom, Meet)
+        4) อัปเดตเบราว์เซอร์เป็นเวอร์ชันล่าสุด`
+    );
     return false;
   }
 }
+
 
 let mpCameraReady = false;
 let mpCam = null;
