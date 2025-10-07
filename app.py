@@ -283,7 +283,119 @@ def dbping():
         return jsonify(ok=True, server_ip=SERVER_IP)
     except Exception as e:
         return jsonify(ok=False, error=str(e)), 500
+# ---------- DB: bootstrap tables (run once) ----------
+def init_db():
+    try:
+        conn = get_conn(); cur = conn.cursor()
+        # ตารางวิชา
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS subjects (
+                subjectID   INT AUTO_INCREMENT PRIMARY KEY,
+                userID      INT NOT NULL,
+                subjectname VARCHAR(100) NOT NULL,
+                created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        """)
+        # ตารางบันทึกเวลา
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS focus_logs (
+                logID      INT AUTO_INCREMENT PRIMARY KEY,
+                userID     INT NOT NULL,
+                subjectID  INT NOT NULL,
+                timer      INT NOT NULL,         -- นาที
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (subjectID) REFERENCES subjects(subjectID)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        """)
+        conn.commit()
+    finally:
+        try: cur.close(); conn.close()
+        except: pass
 
+init_db()
+
+# ---------- APIs: ใช้ตารางเดิมของคุณ (subject, plan) ----------
+from flask import abort
+
+def _require_login():
+    if "user_id" not in session:
+        abort(401, description="not logged in")
+    return session["user_id"]
+
+# 1) ดึงวิชาทั้งหมดจากตาราง subject (ไม่ผูก user)
+@app.route("/api/subjects", methods=["GET"])
+def api_subjects_list():
+    # ถ้าอยากให้เห็นได้แม้ไม่ล็อกอิน ให้ลบบรรทัด _require_login() ออก
+    # _require_login()
+    conn = get_conn(); cur = conn.cursor(dictionary=True)
+    try:
+        cur.execute("SELECT subjectID, subjectname FROM subject ORDER BY subjectname")
+        rows = cur.fetchall()
+        return jsonify(rows), 200
+    finally:
+        cur.close(); conn.close()
+# 2) เพิ่มวิชาใหม่เข้า subject
+@app.route("/api/subjects", methods=["POST"])
+def api_subjects_add():
+    _require_login()  # เอาออกได้ถ้าอยากให้ใครๆ เพิ่มได้
+    data = request.get_json(silent=True) or {}
+    name = (data.get("name") or "").strip()
+    if not name:
+        return jsonify(error="กรุณาใส่ชื่อวิชา"), 400
+
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("INSERT INTO subject (subjectname) VALUES (%s)", (name,))
+        new_id = cur.lastrowid
+        conn.commit()
+        return jsonify({"subjectID": new_id, "subjectname": name}), 201
+    finally:
+        cur.close(); conn.close()
+        
+# 3) บันทึกเวลาเรียนลงตาราง plan (ผูกกับผู้ใช้ที่ล็อกอิน)
+@app.route("/api/log", methods=["POST"])
+def api_log_add():
+    user_id = _require_login()
+    data = request.get_json(silent=True) or {}
+    subjectID = int(data.get("subjectID") or 0)
+    minutes   = int(data.get("timer") or 0)
+    if subjectID <= 0 or minutes <= 0:
+        return jsonify(error="ข้อมูลไม่ครบ"), 400
+
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        # เช็คว่า subjectID มีจริงในตาราง subject
+        cur.execute("SELECT 1 FROM subject WHERE subjectID=%s", (subjectID,))
+        if not cur.fetchone():
+            return jsonify(error="subject ไม่ถูกต้อง"), 400
+
+        # ✅ เปลี่ยนจาก plan → dashboard
+        cur.execute("""
+            INSERT INTO dashboard (userID, subjectID, timer, Date)
+            VALUES (%s, %s, %s, NOW())
+        """, (user_id, subjectID, minutes))
+        conn.commit()
+        return jsonify(ok=True)
+    finally:
+        cur.close(); conn.close()
+
+# 4) ดึงประวัติการบันทึกของผู้ใช้ (join ชื่อวิชา)
+@app.route("/api/logs", methods=["GET"])
+def api_logs_list():
+    user_id = _require_login()
+    conn = get_conn(); cur = conn.cursor(dictionary=True)
+    try:
+        # ✅ เปลี่ยนจาก plan p → dashboard p
+        cur.execute("""
+            SELECT DATE(p.Date) AS Date, p.timer, s.subjectname
+            FROM dashboard p
+            JOIN subject s ON s.subjectID = p.subjectID
+            WHERE p.userID=%s
+            ORDER BY p.Date DESC
+        """, (user_id,))
+        return jsonify(cur.fetchall())
+    finally:
+        cur.close(); conn.close()
 # ---------- RUN ----------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

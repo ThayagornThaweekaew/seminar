@@ -1,19 +1,32 @@
-const sessionsEl = document.getElementById("sessions");
+// ===== DOM bindings (ต้องมี) =====
+const display         = document.getElementById("display");
+const startBtn        = document.getElementById("startBtn");
+const pauseBtn        = document.getElementById("pauseBtn");
+const stopBtn         = document.getElementById("stopBtn");
+
+const timeSelect      = document.getElementById("timeSelect");
+const subjectSelect   = document.getElementById("subjectSelect");
+const newSubjectInput = document.getElementById("newSubject");
+const addSubjectBtn   = document.getElementById("addSubjectBtn");
+
+const subjectLog      = document.getElementById("subjectLog");
+const totalTimeEl     = document.getElementById("totalTime");
+const todayTimeEl     = document.getElementById("todayTime");
+const sessionsEl      = document.getElementById("sessions");
 const subjectsCountEl = document.getElementById("subjectsCount");
-const progressBar = document.getElementById("progressBar");
+const progressBar     = document.getElementById("progressBar");
+
+const modeTimerBtn    = document.getElementById("modeTimerBtn");
+const modePomoBtn     = document.getElementById("modePomoBtn");
+const pomoPreset      = document.getElementById("pomoPreset");
+const modeHint        = document.getElementById("modeHint");
+
+const birdEl          = document.getElementById("bird");
+const moodEl          = document.getElementById("mood");
 
 /* Mode switch UI */
 let mode = "timer"; // 'timer' | 'pomo'
-let pomo = { focus: 25, short: 5, long: 15, longGap: 4, auto: true };
-const modeTimerBtn = document.getElementById("modeTimerBtn");
-const modePomoBtn  = document.getElementById("modePomoBtn");
-const pomoPreset   = document.getElementById("pomoPreset");
-const modeHint     = document.getElementById("modeHint");
-
-/* Bird */
-const birdEl = document.getElementById("bird");
-const moodEl = document.getElementById("mood");
-
+let pomo = { focus: 25, short: 5, long: 15, longGap: 4, auto: true }
 /* Chart */
 let chartInstance = null;
 
@@ -303,10 +316,12 @@ async function refreshLogsFromDB(){
     if (!rs.ok) {
       const tbody = document.querySelector("#subjectTotals tbody");
       if (tbody) tbody.innerHTML = `<tr><td colspan="2">ยังไม่ได้เข้าสู่ระบบ</td></tr>`;
-      document.getElementById("grandTotal").textContent = "0 นาที";
+      const g = document.getElementById("grandTotal");
+      if (g) g.textContent = "0 นาที";
       _latestTotalsMap = new Map();
       return;
-    }
+}
+
     const rows = await rs.json();
 
     // รวมเวลาต่อวิชา
