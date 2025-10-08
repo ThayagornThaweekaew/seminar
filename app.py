@@ -337,7 +337,124 @@ def api_logs_list():
         return jsonify(cur.fetchall())
     finally:
         cur.close(); conn.close()
+        
+# ========= Plans API =========
+def _require_login():
+    from flask import abort
+    if "user_id" not in session:
+        abort(401, description="not logged in")
+    return session["user_id"]
+
+def _get_or_create_subject_id(cur, subjectID=None, subject=None):
+    if subjectID:  # รับเป็นตัวเลขมาแล้ว
+        return int(subjectID)
+    name = (subject or "").strip()
+    if not name:
+        return None
+    cur.execute("SELECT subjectID FROM subject WHERE subjectname=%s", (name,))
+    row = cur.fetchone()
+    if row:
+        # row อาจเป็น tuple หรือ dict แล้วแต่ cursor
+        return row[0] if not isinstance(row, dict) else row["subjectID"]
+    cur.execute("INSERT INTO subject (subjectname) VALUES (%s)", (name,))
+    return cur.lastrowid
+
+@app.route("/api/plans", methods=["GET"])
+def api_plans_list():
+    user_id = _require_login()
+    conn = get_conn(); cur = conn.cursor(dictionary=True)
+    try:
+        cur.execute("""
+            SELECT p.planID, p.planname, p.dateplan, p.priority, p.description, p.is_done,
+                   s.subjectname
+            FROM plans p
+            LEFT JOIN subject s ON s.subjectID = p.subjectID
+            WHERE p.userID=%s
+            ORDER BY p.dateplan DESC, p.planID DESC
+        """, (user_id,))
+        return jsonify(cur.fetchall())
+    finally:
+        cur.close(); conn.close()
+
+@app.route("/api/plans", methods=["POST"])
+def api_plans_add():
+    user_id = _require_login()
+    data = request.get_json(silent=True) or {}
+    planname = (data.get("planname") or "").strip()
+    dateplan = (data.get("dateplan") or "").strip()
+    priority = (data.get("priority") or "ปกติ").strip()
+    description = (data.get("description") or "").strip()
+    subjectID = data.get("subjectID")
+    subject   = data.get("subject")
+
+    if not planname or not dateplan:
+        return jsonify(error="กรอกชื่อแผนและวันที่ให้ครบ"), 400
+
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        sid = _get_or_create_subject_id(cur, subjectID=subjectID, subject=subject)
+        cur.execute("""
+            INSERT INTO plans (userID, subjectID, planname, dateplan, priority, description)
+            VALUES (%s,%s,%s,%s,%s,%s)
+        """, (user_id, sid, planname, dateplan, priority, description))
+        conn.commit()
+        return jsonify(ok=True, planID=cur.lastrowid), 201
+    finally:
+        cur.close(); conn.close()
+
+@app.route("/api/plans/<int:plan_id>", methods=["PUT"])
+def api_plans_update(plan_id):
+    user_id = _require_login()
+    data = request.get_json(silent=True) or {}
+
+    fields, params = [], []
+    mapping = {"planname":"planname","dateplan":"dateplan","priority":"priority",
+               "description":"description","is_done":"is_done"}
+    for k, dbk in mapping.items():
+        if k in data and data[k] is not None:
+            fields.append(f"{dbk}=%s"); params.append(data[k])
+
+    if "subjectID" in data or "subject" in data:
+        conn = get_conn(); cur = conn.cursor()
+        try:
+            sid = _get_or_create_subject_id(cur, subjectID=data.get("subjectID"), subject=data.get("subject"))
+            fields.append("subjectID=%s"); params.append(sid)
+            conn.commit()
+        finally:
+            cur.close(); conn.close()
+
+    if not fields:
+        return jsonify(error="ไม่มีข้อมูลให้อัปเดต"), 400
+
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        params.extend([user_id, plan_id])
+        cur.execute(f"UPDATE plans SET {', '.join(fields)} WHERE userID=%s AND planID=%s", params)
+        if cur.rowcount == 0:
+            return jsonify(error="ไม่พบรายการของคุณ"), 404
+        conn.commit()
+        return jsonify(ok=True)
+    finally:
+        cur.close(); conn.close()
+
+@app.route("/api/plans/<int:plan_id>", methods=["DELETE"])
+def api_plans_delete(plan_id):
+    user_id = _require_login()
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM plans WHERE userID=%s AND planID=%s", (user_id, plan_id))
+        if cur.rowcount == 0:
+            return jsonify(error="ไม่พบรายการของคุณ"), 404
+        conn.commit()
+        return jsonify(ok=True)
+    finally:
+        cur.close(); conn.close()
+# ======== End Plans API ========
+
 
 # ---------- RUN ----------
+# ปลายไฟล์ app.py
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="127.0.0.1", port=5000, debug=True)
+
+

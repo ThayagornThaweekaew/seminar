@@ -194,15 +194,6 @@
 
   <!-- ========== Scripts ========== -->
   <script>
-    // ทำให้คลิกโปรไฟล์แล้วไปหน้าโปรไฟล์จริงผ่าน Flask route
-    (function(){
-      const card = document.getElementById('sidebarProfile');
-      card?.addEventListener('click', (e)=>{
-        e.preventDefault();
-        e.stopPropagation();
-        window.location.href = "{{ url_for('user_page') }}";
-      });
-    })();
 
     // เพิ่ม Logout ใน Sidebar → เรียก /logout ของเซิร์ฟเวอร์
     (function () {
